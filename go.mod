@@ -4,6 +4,7 @@ go 1.27.2
 
 require (
 	github.com/joho/godotenv v1.5.1
+	github.com/rabbitmq/amqp091-go v1.15.0
 	github.com/redis/go-redis/v9 v9.23.0
 	go.uber.org/zap v1.28.0
 	go.yaml.in/yaml/v3 v3.0.5
