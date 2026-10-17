@@ -5,6 +5,7 @@ import (
 	"feed-to-go/internal/config"
 	"feed-to-go/pkg/cache"
 	"feed-to-go/pkg/logging"
+	"feed-to-go/pkg/mq"
 	"feed-to-go/pkg/persistence"
 	"os"
 	"time"
@@ -34,6 +35,7 @@ func main() {
 		configPath = "configs/config.yaml"
 	}
 
+	// Config Loading
 	logging.Sugar.Infof("Loading config from %s", configPath)
 	cfg, usedDefault, err := config.LoadLocalDev(configPath)
 	if err != nil {
@@ -45,6 +47,7 @@ func main() {
 		logging.Sugar.Infof("Config loaded from file: %s", configPath)
 	}
 
+	// Database
 	sqlDB, err := persistence.NewDB(cfg.Database)
 	if err != nil {
 		logging.Sugar.Fatalf("Failed to connect database: %v", err)
@@ -54,6 +57,7 @@ func main() {
 	}
 	defer persistence.CloseDB(sqlDB)
 
+	// Redis
 	cache, err := cache.NewFromCfg(&cfg.Redis)
 	if err != nil {
 		logging.Sugar.Warnf("Redis config error (cache disabled): %v", err)
@@ -71,4 +75,14 @@ func main() {
 			logging.Sugar.Infof("Redis connected (cache enabled)")
 		}
 	}
+
+	rmq, err := mq.NewRabbitMQ(&cfg.RabbitMQ)
+	if err != nil {
+		logging.Sugar.Warnf("RabbitMQ config err (disabled): %v", err)
+		rmq = nil
+	} else {
+		defer rmq.CLose()
+		logging.Sugar.Infof("RabbitMQ connected")
+	}
+
 }

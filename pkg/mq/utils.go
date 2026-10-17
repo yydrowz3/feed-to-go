@@ -12,11 +12,6 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-const (
-	DLXExchange   = "dlx.events"
-	MaxRetryCount = 3
-)
-
 func DeclareTopic(ch *amqp.Channel, exchange string, queue string, bindingKey string) error {
 	if ch == nil {
 		return errors.New("channel is not initialized")
