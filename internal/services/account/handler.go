@@ -2,7 +2,6 @@ package account
 
 import (
 	"errors"
-	"feed-to-go/internal/api"
 	"feed-to-go/internal/util"
 	"net/http"
 	"os"
@@ -26,7 +25,7 @@ func NewAccountHandler(accountService *AccountService) *AccountHandler {
 func (h *AccountHandler) CreateAccount(c *gin.Context) {
 	var req CreateAccountRequest
 	if err := c.ShouldBindBodyWithJSON(&req); err != nil {
-		c.JSON(api.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if err := h.accountService.CreateAccount(c.Request.Context(), &Account{
@@ -42,18 +41,18 @@ func (h *AccountHandler) CreateAccount(c *gin.Context) {
 func (h *AccountHandler) Rename(c *gin.Context) {
 	var req RenameRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(api.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	accountID, err := util.GetAccountID(c)
 	if err != nil {
-		c.JSON(api.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	token, err := h.accountService.Rename(c.Request.Context(), accountID, req.NewUsername)
 	if err != nil {
 		if errors.Is(err, ErrNewUsernameRequired) {
-			c.JSON(api.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+			c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 			return
 		}
 		if errors.Is(err, ErrUsernameTaken) {
@@ -73,7 +72,7 @@ func (h *AccountHandler) Rename(c *gin.Context) {
 func (h *AccountHandler) ChangePassword(c *gin.Context) {
 	var req ChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(api.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if err := h.accountService.ChangePassword(c.Request.Context(), req.Username, req.OldPassword, req.NewPassword); err != nil {
@@ -86,7 +85,7 @@ func (h *AccountHandler) ChangePassword(c *gin.Context) {
 func (h *AccountHandler) FindByID(c *gin.Context) {
 	var req FindByIDRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(api.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if account, err := h.accountService.FindByID(c.Request.Context(), req.ID); err != nil {
@@ -100,7 +99,7 @@ func (h *AccountHandler) FindByID(c *gin.Context) {
 func (h *AccountHandler) FindByUsername(c *gin.Context) {
 	var req FindByUsernameRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(api.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if account, err := h.accountService.FindByUsername(c.Request.Context(), req.Username); err != nil {
@@ -114,7 +113,7 @@ func (h *AccountHandler) FindByUsername(c *gin.Context) {
 func (h *AccountHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(api.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	account, err := h.accountService.FindByUsername(c.Request.Context(), req.Username)
@@ -133,7 +132,7 @@ func (h *AccountHandler) Login(c *gin.Context) {
 func (h *AccountHandler) Logout(c *gin.Context) {
 	accountID, err := util.GetAccountID(c)
 	if err != nil {
-		c.JSON(api.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if err := h.accountService.Logout(c.Request.Context(), accountID); err != nil {
@@ -199,11 +198,11 @@ func (h *AccountHandler) UpdateProfile(c *gin.Context) {
 	}
 	var req UpdateProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(api.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if err := h.accountService.UpdateProfile(c.Request.Context(), accountID, &req); err != nil {
-		c.JSON(api.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "profile updated"})
@@ -212,7 +211,7 @@ func (h *AccountHandler) UpdateProfile(c *gin.Context) {
 func (h *AccountHandler) Refresh(c *gin.Context) {
 	var req RefreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(api.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	newToken, accountID, username, err := h.accountService.RefreshAccessToken(c.Request.Context(), req.RefreshToken)

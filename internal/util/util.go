@@ -5,8 +5,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 func RandHex(n int) (string, error) {
@@ -38,4 +40,24 @@ func GetAccountID(c *gin.Context) (uint, error) {
 		return 0, errors.New("accountID has invalid type")
 	}
 	return id, nil
+}
+
+var (
+	ErrUnauthorized = errors.New("unauthorized")
+	ErrValidation   = errors.New("validation error")
+)
+
+func ClassifyHTTPStatus(err error) int {
+	switch {
+	case err == nil:
+		return http.StatusOK
+	case errors.Is(err, ErrUnauthorized):
+		return http.StatusUnauthorized
+	case errors.Is(err, ErrValidation):
+		return http.StatusBadRequest
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		return http.StatusNotFound
+	default:
+		return http.StatusInternalServerError
+	}
 }
