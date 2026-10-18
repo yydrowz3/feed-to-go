@@ -67,6 +67,15 @@ func (ar *AccountRepository) FindByID(ctx context.Context, id uint) (*Account, e
 	return &account, nil
 }
 
+func (ar *AccountRepository) FindTokenByID(ctx context.Context, id uint) (string, error) {
+	var account Account
+	if err := ar.db.WithContext(ctx).Select("token").First(&account, id).Error; err != nil {
+		return "", err
+	}
+
+	return account.Token, nil
+}
+
 func (ar *AccountRepository) FindByUsername(ctx context.Context, username string) (*Account, error) {
 	var account Account
 	if err := ar.db.WithContext(ctx).Where("username = ?", username).First(&account).Error; err != nil {

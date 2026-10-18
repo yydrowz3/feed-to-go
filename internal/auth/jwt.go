@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
-	"feed-to-go/internal/services/account"
 	"feed-to-go/pkg/cache"
 	"feed-to-go/pkg/logging"
 	"net/http"
@@ -25,7 +24,11 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func JWTAuth(accountRepo *account.AccountRepository, cache *cache.Client) gin.HandlerFunc {
+type TokenRepository interface {
+	FindTokenByID(ctx context.Context, id uint) (string, error)
+}
+
+func JWTAuth(accountRepo TokenRepository, cache *cache.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -49,7 +52,7 @@ func JWTAuth(accountRepo *account.AccountRepository, cache *cache.Client) gin.Ha
 	}
 }
 
-func SoftJWTAuth(accountRepo *account.AccountRepository, cache *cache.Client) gin.HandlerFunc {
+func SoftJWTAuth(accountRepo TokenRepository, cache *cache.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		// let go, when no auth header
@@ -76,7 +79,7 @@ func SoftJWTAuth(accountRepo *account.AccountRepository, cache *cache.Client) gi
 	}
 }
 
-func check(c *gin.Context, claims *Claims, tokenString string, accountRepo *account.AccountRepository, cache *cache.Client) {
+func check(c *gin.Context, claims *Claims, tokenString string, accountRepo TokenRepository, cache *cache.Client) {
 	key := cache.Key("account:%d", claims.AccountID)
 
 	if cache != nil {
@@ -96,8 +99,8 @@ func check(c *gin.Context, claims *Claims, tokenString string, accountRepo *acco
 	}
 
 	// redis fail: check db
-	accountInfo, err := accountRepo.FindByID(c.Request.Context(), claims.AccountID)
-	if err != nil || accountInfo.Token == "" || accountInfo.Token != tokenString {
+	storedToken, err := accountRepo.FindTokenByID(c.Request.Context(), claims.AccountID)
+	if err != nil || storedToken == "" || storedToken != tokenString {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "token has been revoked"})
 		return
 	}

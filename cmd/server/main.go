@@ -66,7 +66,7 @@ func main() {
 		logging.Sugar.Warnf("Redis config error (cache disabled): %v", err)
 		cache = nil
 	} else {
-		pingCtx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+		pingCtx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel()
 		// 这边 超时 就会出错
 		if err := cache.Ping(pingCtx); err != nil {

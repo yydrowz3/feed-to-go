@@ -16,6 +16,8 @@ type Client struct {
 	keyPrefix string
 }
 
+var ErrUnintializedClient = errors.New("redis client not initialized")
+
 const defaultKeyPrefix = "v1:"
 
 func NewClient(rdb *redis.Client, keyPrefix string) *Client {
@@ -41,7 +43,7 @@ func (c *Client) Close() error {
 
 func (c *Client) Ping(ctx context.Context) error {
 	if c == nil || c.rdb == nil {
-		return errors.New("redis client not initialized")
+		return ErrUnintializedClient
 	}
 
 	return c.rdb.Ping(ctx).Err()
@@ -58,7 +60,7 @@ func (c *Client) Key(format string, args ...any) string {
 
 func (c *Client) Lock(ctx context.Context, key string, ttl time.Duration) (token string, ok bool, err error) {
 	if c == nil || c.rdb == nil {
-		return "", false, nil
+		return "", false, ErrUnintializedClient
 	}
 
 	token, err = randToken(16)
@@ -73,7 +75,7 @@ func (c *Client) Lock(ctx context.Context, key string, ttl time.Duration) (token
 
 func (c *Client) Unlock(ctx context.Context, key string, token string) error {
 	if c == nil || c.rdb == nil {
-		return nil
+		return ErrUnintializedClient
 	}
 
 	_, err := unlockScript.Run(ctx, c.rdb, []string{key}, token).Result()
@@ -82,7 +84,7 @@ func (c *Client) Unlock(ctx context.Context, key string, token string) error {
 
 func (c *Client) IncrementWithExpire(ctx context.Context, key string, expire time.Duration) (int64, error) {
 	if c == nil || c.rdb == nil {
-		return 0, nil
+		return 0, ErrUnintializedClient
 	}
 
 	return incrementWithExpireScript.Run(
