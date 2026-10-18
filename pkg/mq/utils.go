@@ -24,6 +24,7 @@ func DeclareTopic(ch *amqp.Channel, exchange string, queue string, bindingKey st
 		return err
 	}
 
+	// queue 提供 死信 功能，绑定到 DLXExchange
 	q, err := ch.QueueDeclare(queue, true, false, false, false, amqp.Table{"x-dead-letter-exchange": DLXExchange})
 	if err != nil {
 		return err
