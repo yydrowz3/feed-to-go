@@ -1,6 +1,8 @@
 package api
 
 import (
+	"feed-to-go/internal/auth"
+	"feed-to-go/internal/services/account"
 	"feed-to-go/pkg/cache"
 	"feed-to-go/pkg/logging"
 	"feed-to-go/pkg/mq"
@@ -30,6 +32,26 @@ func SetRouter(db *gorm.DB, cache *cache.Client, rmq *mq.RabbitMQ) *gin.Engine {
 	socialLimiter := ratelimit.Limit(cache, "social_write", 20, time.Minute, ratelimit.KeyByAccount)
 
 	// account
+	accountRepository := account.NewAccountRepository(db)
+	accountService := account.NewAccountService(accountRepository, cache)
+	accountHandler := account.NewAccountHandler(accountService)
+	accountGroup := r.Group("/account")
+	{
+		accountGroup.POST("/register", registerLimiter, accountHandler.CreateAccount)
+		accountGroup.POST("/login", loginLimiter, accountHandler.Login)
+		accountGroup.POST("/changePassword", accountHandler.ChangePassword)
+		accountGroup.POST("/findByID", accountHandler.FindByID)
+		accountGroup.POST("/findByUsername", accountHandler.FindByUsername)
+		accountGroup.POST("/refresh", accountHandler.Refresh)
+	}
+	protectedAccountGroup := accountGroup.Group("")
+	protectedAccountGroup.Use(auth.JWTAuth(accountRepository, cache))
+	{
+		protectedAccountGroup.POST("/logout", accountHandler.Logout)
+		protectedAccountGroup.POST("/rename", accountHandler.Rename)
+		protectedAccountGroup.POST("/uploadAvatar", accountHandler.UploadAvatar)
+		protectedAccountGroup.POST("/updateProfile", accountHandler.UpdateProfile)
+	}
 
 	// video
 
