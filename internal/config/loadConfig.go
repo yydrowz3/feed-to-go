@@ -77,24 +77,24 @@ func ApplyEnvOverrides(cfg *Config) {
 			cfg.Server.Port = port
 		}
 	}
-	if v := os.Getenv("MYSQL_HOST"); v != "" {
+	if v := os.Getenv("POSTGRES_HOST"); v != "" {
 		cfg.Database.Host = v
 	}
-	if v := os.Getenv("MYSQL_PORT"); v != "" {
+	if v := os.Getenv("POSTGRES_PORT"); v != "" {
 		if port, err := strconv.Atoi(v); err == nil {
 			cfg.Database.Port = port
 		}
 	}
-	if v := os.Getenv("MYSQL_USER"); v != "" {
+	if v := os.Getenv("POSTGRES_USER"); v != "" {
 		cfg.Database.User = v
 	}
-	if v := os.Getenv("MYSQL_ROOT_PASSWORD"); v != "" {
+	if v := os.Getenv("POSTGRES_ROOT_PASSWORD"); v != "" {
 		cfg.Database.Password = v
 	}
-	if v := os.Getenv("MYSQL_PASSWORD"); v != "" {
+	if v := os.Getenv("POSTGRES_PASSWORD"); v != "" {
 		cfg.Database.Password = v
 	}
-	if v := os.Getenv("MYSQL_DATABASE"); v != "" {
+	if v := os.Getenv("POSTGRES_DATABASE"); v != "" {
 		cfg.Database.DBName = v
 	}
 	if v := os.Getenv("REDIS_HOST"); v != "" {
@@ -149,7 +149,7 @@ func DefaultLocalConfig() Config {
 		},
 		Database: DatabaseConfig{
 			Host:     "localhost",
-			Port:     3306,
+			Port:     5432,
 			User:     "root",
 			Password: "123456",
 			DBName:   "feed",
