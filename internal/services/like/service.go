@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"feed-to-go/internal/services/video"
+	"feed-to-go/internal/util"
 	"feed-to-go/pkg/cache"
 	"feed-to-go/pkg/mq"
 	"time"
@@ -97,7 +98,7 @@ func (s *LikeService) Like(ctx context.Context, like *Like) error {
 
 	// Fallback: direct Redis update when popularity MQ publish fails.
 	if !popularityEnqueued {
-		UpdatePopularityCache(ctx, s.cache, like.VideoID, 1)
+		util.UpdatePopularityCache(ctx, s.cache, like.VideoID, 1)
 	}
 
 	return nil
@@ -170,7 +171,7 @@ func (s *LikeService) Unlike(ctx context.Context, like *Like) error {
 
 	// Fallback: direct Redis update when popularity MQ publish fails.
 	if !popularityEnqueued {
-		UpdatePopularityCache(ctx, s.cache, like.VideoID, -1)
+		util.UpdatePopularityCache(ctx, s.cache, like.VideoID, -1)
 	}
 
 	return nil
