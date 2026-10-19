@@ -1,6 +1,8 @@
 package chunk
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -48,4 +50,9 @@ func (h *ChunkUploadHandler) saveSession(ctx *gin.Context, s *ChunkUploadSession
 	}
 
 	return h.cache.SetBytes(ctx.Request.Context(), h.sessionKey(s.UploadID), b, sessionTTL)
+}
+
+func computeMD5(data []byte) string {
+	h := md5.Sum(data)
+	return hex.EncodeToString(h[:])
 }
