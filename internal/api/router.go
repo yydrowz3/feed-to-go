@@ -4,6 +4,7 @@ import (
 	"feed-to-go/internal/auth"
 	"feed-to-go/internal/services/account"
 	"feed-to-go/internal/services/chunk"
+	"feed-to-go/internal/services/like"
 	"feed-to-go/internal/services/video"
 	"feed-to-go/pkg/cache"
 	"feed-to-go/pkg/logging"
@@ -84,6 +85,23 @@ func SetRouter(db *gorm.DB, cache *cache.Client, rmq *mq.RabbitMQ) *gin.Engine {
 	}
 
 	// like
+	likeMQ, err := mq.NewLikeMQ(rmq)
+	if err != nil {
+		log.Printf("LikeMQ init failed (mq disabled): %v", err)
+		likeMQ = nil
+	}
+	likeRepository := like.NewLikeRepository(db)
+	likeService := like.NewLikeService(likeRepository, videoRepository, cache, likeMQ, popularityMQ)
+	likeHandler := like.NewLikeHandler(likeService)
+	likeGroup := r.Group("/like")
+	protectedLikeGroup := likeGroup.Group("")
+	protectedLikeGroup.Use(auth.JWTAuth(accountRepository, cache))
+	{
+		protectedLikeGroup.POST("/like", likeLimiter, likeHandler.Like)
+		protectedLikeGroup.POST("/unlike", likeLimiter, likeHandler.Unlike)
+		protectedLikeGroup.POST("/isLiked", likeHandler.IsLiked)
+		protectedLikeGroup.POST("/listMyLikedVideos", likeHandler.ListMyLikedVideos)
+	}
 
 	// comment
 
