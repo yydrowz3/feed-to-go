@@ -4,6 +4,7 @@ import (
 	"feed-to-go/internal/auth"
 	"feed-to-go/internal/services/account"
 	"feed-to-go/internal/services/chunk"
+	"feed-to-go/internal/services/comment"
 	"feed-to-go/internal/services/like"
 	"feed-to-go/internal/services/video"
 	"feed-to-go/pkg/cache"
@@ -104,6 +105,24 @@ func SetRouter(db *gorm.DB, cache *cache.Client, rmq *mq.RabbitMQ) *gin.Engine {
 	}
 
 	// comment
+	commentRepository := comment.NewCommentRepository(db)
+	commentMQ, err := mq.NewCommentMQ(rmq)
+	if err != nil {
+		log.Printf("CommentMQ init failed (mq disabled): %v", err)
+		commentMQ = nil
+	}
+	commentService := comment.NewCommentService(commentRepository, videoRepository, cache, commentMQ, popularityMQ)
+	commentHandler := comment.NewCommentHandler(commentService, accountService)
+	commentGroup := r.Group("/comment")
+	{
+		commentGroup.POST("/listAll", commentHandler.GetAllComments)
+	}
+	protectedCommentGroup := commentGroup.Group("")
+	protectedCommentGroup.Use(auth.JWTAuth(accountRepository, cache))
+	{
+		protectedCommentGroup.POST("/publish", commentLimiter, commentHandler.PublishComment)
+		protectedCommentGroup.POST("/delete", commentLimiter, commentHandler.DeleteComment)
+	}
 
 	// social
 
