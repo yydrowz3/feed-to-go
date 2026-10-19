@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -60,4 +61,22 @@ func ClassifyHTTPStatus(err error) int {
 	default:
 		return http.StatusInternalServerError
 	}
+}
+
+// () 表示 匹配组
+var tagRegex = regexp.MustCompile(`#([\p{L}\p{N}_]+)`)
+
+func ExtractTags(text string) []string {
+	matches := tagRegex.FindAllStringSubmatch(text, -1)
+	seen := make(map[string]bool)
+	var tags []string
+	for _, m := range matches {
+		tag := m[1]
+		if !seen[tag] {
+			seen[tag] = true
+			tags = append(tags, tag)
+		}
+	}
+
+	return tags
 }

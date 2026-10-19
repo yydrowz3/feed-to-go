@@ -31,3 +31,7 @@ if count == 1 then
 end
 return count
 `)
+
+func IsMiss(err error) bool {
+	return err == redis.Nil
+}
