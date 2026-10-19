@@ -19,6 +19,10 @@ type ChunkUploadHandler struct {
 	cache *cache.Client
 }
 
+func NewChunkUploadHandler(cache *cache.Client) *ChunkUploadHandler {
+	return &ChunkUploadHandler{cache: cache}
+}
+
 func (h *ChunkUploadHandler) InitChunkUpload(c *gin.Context) {
 	if h.cache == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": ErrChunkCacheUnavailable.Error()})

@@ -3,6 +3,7 @@ package api
 import (
 	"feed-to-go/internal/auth"
 	"feed-to-go/internal/services/account"
+	"feed-to-go/internal/services/chunk"
 	"feed-to-go/internal/services/video"
 	"feed-to-go/pkg/cache"
 	"feed-to-go/pkg/logging"
@@ -64,7 +65,7 @@ func SetRouter(db *gorm.DB, cache *cache.Client, rmq *mq.RabbitMQ) *gin.Engine {
 	}
 	videoService := video.NewVideoService(videoRepository, cache, popularityMQ)
 	videoHandler := video.NewVideoHandler(videoService, accountService)
-	chunkHandler := video.NewChunkUploadHandler(cache)
+	chunkHandler := chunk.NewChunkUploadHandler(cache)
 	videoGroup := r.Group("/video")
 	{
 		videoGroup.POST("/listByAUthorID", videoHandler.ListByAuthorID)
@@ -81,6 +82,7 @@ func SetRouter(db *gorm.DB, cache *cache.Client, rmq *mq.RabbitMQ) *gin.Engine {
 		protectedVideoGroup.POST("/chunk/status", chunkHandler.ChunkStatus)
 		protectedVideoGroup.POST("/chunk/complete", chunkHandler.CompleteChunkUpload)
 	}
+
 	// like
 
 	// comment
