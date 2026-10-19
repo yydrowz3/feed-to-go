@@ -2,8 +2,10 @@ package like
 
 import (
 	"context"
+	"errors"
 	"feed-to-go/internal/services/video"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 )
 
@@ -33,6 +35,10 @@ func (r *LikeRepository) LikeIgnoreDuplicate(ctx context.Context, like *Like) (c
 	err = r.db.WithContext(ctx).Create(like).Error
 	if err == nil {
 		return true, nil
+	}
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return false, nil
 	}
 
 	return false, err
