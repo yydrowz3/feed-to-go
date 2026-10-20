@@ -81,7 +81,7 @@ func (vh *VideoHandler) UploadVideo(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "only .mp4 is allowed"})
 		return
 	}
-	date := time.Now().Format("20000101")
+	date := time.Now().Format("20060102")
 	relDir := filepath.Join("videos", fmt.Sprintf("%d", authorId), date)
 	root := filepath.Join(".run", "uploads")
 	absDir := filepath.Join(root, relDir)
@@ -138,7 +138,7 @@ func (vh *VideoHandler) UploadCover(c *gin.Context) {
 		return
 	}
 
-	date := time.Now().Format("20000101")
+	date := time.Now().Format("20060102")
 	relDir := filepath.Join("covers", fmt.Sprintf("%d", authorId), date)
 	root := filepath.Join(".run", "uploads")
 	absDir := filepath.Join(root, relDir)

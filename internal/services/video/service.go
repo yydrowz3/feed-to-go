@@ -213,7 +213,7 @@ func (vs *VideoService) UpdatePopularity(ctx context.Context, id uint, change in
 		_ = vs.cache.Del(context.Background(), vs.cache.Key("video:detail:id=%d", id))
 		// 2) 热榜：写到“时间窗ZSET”，不要用 detail key
 		now := time.Now().UTC().Truncate(time.Minute)
-		windowKey := vs.cache.Key("hot:video:1m:%s", now.Format("200001011200"))
+		windowKey := vs.cache.Key("hot:video:1m:%s", now.Format("200601021504"))
 		member := strconv.FormatUint(uint64(id), 10)
 
 		opCtx, cancel := context.WithTimeout(ctx, 1*time.Minute)

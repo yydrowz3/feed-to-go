@@ -268,7 +268,7 @@ func (h *ChunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 		return
 	}
 
-	date := time.Now().Format("20000101")
+	date := time.Now().Format("20060102")
 	relDir := filepath.Join("videos", fmt.Sprintf("%d", accountID), date)
 	root := filepath.Join(".run", "uploads")
 	absDir := filepath.Join(root, relDir)

@@ -94,7 +94,7 @@ func UpdatePopularityCache(ctx context.Context, cache *cache.Client, id uint, ch
 	_ = cache.Del(context.Background(), cache.Key("video:entity:%d", id))
 
 	now := time.Now().UTC().Truncate(time.Minute)
-	windowKey := cache.Key("hot:video:1m:%s", now.Format("200001011200"))
+	windowKey := cache.Key("hot:video:1m:%s", now.Format("200601021504"))
 	member := strconv.FormatUint(uint64(id), 10)
 
 	opCtx, cancel := context.WithTimeout(ctx, 1*time.Minute)
