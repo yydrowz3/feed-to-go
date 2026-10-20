@@ -6,6 +6,7 @@ import (
 	"feed-to-go/internal/services/chunk"
 	"feed-to-go/internal/services/comment"
 	"feed-to-go/internal/services/like"
+	"feed-to-go/internal/services/social"
 	"feed-to-go/internal/services/video"
 	"feed-to-go/pkg/cache"
 	"feed-to-go/pkg/logging"
@@ -125,6 +126,25 @@ func SetRouter(db *gorm.DB, cache *cache.Client, rmq *mq.RabbitMQ) *gin.Engine {
 	}
 
 	// social
+	socialMQ, err := mq.NewSocialMQ(rmq)
+	if err != nil {
+		log.Printf("SocialMQ init failed (mq disabled): %v", err)
+		socialMQ = nil
+	}
+	socialRepository := social.NewSocialRepository(db)
+	socialService := social.NewSocialService(socialRepository, accountRepository, socialMQ, cache)
+	socialHandler := social.NewSocialHandler(socialService)
+	socialGroup := r.Group("/social")
+	protectedSocialGroup := socialGroup.Group("")
+	protectedSocialGroup.Use(auth.JWTAuth(accountRepository, cache))
+	{
+		protectedSocialGroup.POST("/follow", socialLimiter, socialHandler.Follow)
+		protectedSocialGroup.POST("/unfollow", socialLimiter, socialHandler.Unfollow)
+		protectedSocialGroup.POST("/getAllFollowers", socialHandler.GetAllFollowers)
+		protectedSocialGroup.POST("/getAllVloggers", socialHandler.GetAllFollowings)
+		protectedSocialGroup.POST("/getCounts", socialHandler.GetCounts)
+	}
+	accountGroup.POST("/getProfile", socialHandler.GetProfile(accountService, videoRepository, socialRepository))
 
 	// feed
 
