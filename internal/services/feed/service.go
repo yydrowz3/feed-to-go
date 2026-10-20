@@ -7,12 +7,15 @@ import (
 	"feed-to-go/internal/services/video"
 	"feed-to-go/pkg/cache"
 	"feed-to-go/pkg/logging"
+	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
 	"golang.org/x/sync/singleflight"
 
 	localCache "github.com/patrickmn/go-cache"
+	"github.com/redis/go-redis/v9"
 )
 
 type FeedService struct {
@@ -155,21 +158,285 @@ func (f *FeedService) GetVideoByIDs(ctx context.Context, videoIDs []uint) ([]*vi
 
 // 查询最新视频 (冷热分离 + 游标分页)
 func (f *FeedService) ListLatest(ctx context.Context, limit int, latestBefore time.Time, viewerAccountID uint) (ListLatestResponse, error) {
+	if f.rediscache == nil {
+		return f.ListLatestFromDB(ctx, limit, latestBefore, viewerAccountID)
+	}
 
+	// 获取 ZSET 中最老的一条数据
+	// 冷热数据分界线
+	zsetTail, err := f.rediscache.ZRangeWithScores(ctx, f.rediscache.Key("feed:global_timeline"), 0, 0)
+
+	if err != nil {
+		return f.ListLatestFromDB(ctx, limit, latestBefore, viewerAccountID)
+	}
+	isZsetEmpty := len(zsetTail) == 0
+	if isZsetEmpty {
+		//全局静态锁：无视所有用户的不同时间戳游标
+		sfKey := f.rediscache.Key("sf:fallback:global_timeline_rebuild")
+		v, err, _ := f.requestGroup.Do(sfKey, func() (any, error) {
+			// 无视游标，直接去 MySQL 捞最新的 1000 条
+			dbVideos, err := f.repo.ListLatest(ctx, 1000, time.Time{})
+			if err != nil {
+				return nil, err
+			}
+			if len(dbVideos) == 0 {
+				return "EMPTY_DB", nil // 防无限递归
+			}
+
+			// 重建 ZSET
+			bgCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+			defer cancel()
+			var zElements []redis.Z
+			for _, vid := range dbVideos {
+				zElements = append(zElements, redis.Z{
+					Score:  float64(vid.CreateTime.UnixMilli()),
+					Member: fmt.Sprintf("%d", vid.ID),
+				})
+			}
+			f.rediscache.ZAdd(bgCtx, f.rediscache.Key("feed:global_timeline"), zElements...)
+
+			return "SUCCESS", nil
+		})
+
+		if err != nil {
+			return ListLatestResponse{}, err
+		}
+		if v == "EMPTY_DB" {
+			return ListLatestResponse{HasMore: false}, nil
+		}
+
+		// 让所有被阻塞的请求重新查一遍
+		return f.ListLatest(ctx, limit, latestBefore, viewerAccountID)
+	}
+
+	watermark := int64(zsetTail[0].Score)
+	reqTime := time.Now().UnixMilli()
+	if !latestBefore.IsZero() {
+		reqTime = latestBefore.UnixMilli()
+	}
+	var baseVideos []*video.Video
+	if reqTime <= watermark {
+		//冷数据降级查库
+		// 针对个别用户的防并发（此时可以用时间戳做锁，因为冷尾流量极小）
+		sfKey := f.rediscache.Key("sf:cold:listLatest:%d:%d", limit, reqTime)
+		v, err, _ := f.requestGroup.Do(sfKey, func() (interface{}, error) {
+			return f.repo.ListLatest(ctx, limit, latestBefore)
+		})
+
+		if err != nil {
+			return ListLatestResponse{}, err
+		}
+		baseVideos = v.([]*video.Video)
+		// 不回写 ZSET，防止冷数据污染热点时间线
+	} else {
+		// 热数据直接查redis
+		maxScore := "+inf"
+		if !latestBefore.IsZero() {
+			maxScore = fmt.Sprintf("%d", reqTime-1) // 防重复
+		}
+
+		videoIDsStr, err := f.rediscache.ZRevRangeByScore(ctx, f.rediscache.Key("feed:global_timeline"), maxScore, "-inf", 0, int64(limit))
+		if err != nil {
+			return ListLatestResponse{}, err
+		}
+
+		var videoIDs []uint
+		for _, idStr := range videoIDsStr {
+			if id, err := strconv.ParseUint(idStr, 10, 64); err == nil {
+				videoIDs = append(videoIDs, uint(id))
+			}
+		}
+
+		if len(videoIDs) > 0 {
+			baseVideos, err = f.GetVideoByIDs(ctx, videoIDs)
+			if err != nil {
+				return ListLatestResponse{}, err
+			}
+		}
+
+		// 刚好击穿了冷热边界
+		if len(baseVideos) < limit {
+			remainLimit := limit - len(baseVideos) // 计算还差几个
+			var coldCursor time.Time
+			if len(baseVideos) > 0 {
+				coldCursor = baseVideos[len(baseVideos)-1].CreateTime
+			} else {
+				coldCursor = latestBefore
+			}
+
+			sfKey := f.rediscache.Key("sf:stitch:listLatest:%d:%d", remainLimit, coldCursor.UnixMilli())
+			v, err, _ := f.requestGroup.Do(sfKey, func() (any, error) {
+				return f.repo.ListLatest(ctx, remainLimit, coldCursor)
+			})
+
+			if err == nil {
+				coldVideos := v.([]*video.Video)
+				baseVideos = append(baseVideos, coldVideos...)
+			}
+		}
+	}
+
+	var nextTime int64
+	if len(baseVideos) > 0 {
+		// 将本页最后一条视频的时间作为下一次请求的游标
+		nextTime = baseVideos[len(baseVideos)-1].CreateTime.UnixMilli()
+	}
+	// 从是否拿满推测是否有下一页
+	hasMore := len(baseVideos) == limit
+
+	feedVideos, err := f.buildFeedVideos(ctx, baseVideos, viewerAccountID)
+	if err != nil {
+		return ListLatestResponse{}, err
+	}
+
+	return ListLatestResponse{
+		VideoList: feedVideos,
+		NextTime:  nextTime,
+		HasMore:   hasMore,
+	}, nil
 }
 
 func (f *FeedService) ListLatestFromDB(ctx context.Context, limit int, latestBefore time.Time, viewerAccountID uint) (ListLatestResponse, error) {
+	videos, err := f.repo.ListLatest(ctx, limit, latestBefore)
+	if err != nil {
+		return ListLatestResponse{}, err
+	}
+	feedVideos, err := f.buildFeedVideos(ctx, videos, viewerAccountID)
+	if err != nil {
+		return ListLatestResponse{}, err
+	}
+	var nextTime int64
+	if len(videos) > 0 {
+		nextTime = videos[len(videos)-1].CreateTime.UnixMilli()
+	}
+	return ListLatestResponse{
+		VideoList: feedVideos,
+		NextTime:  nextTime,
+		HasMore:   len(videos) == limit,
+	}, nil
 
 }
 
 // 按照点赞数查询视频
 func (f *FeedService) ListLikesCount(ctx context.Context, limit int, cursor *LikesCountCursor, viewerAccountID uint) (ListLikesCountResponse, error) {
+	videos, err := f.repo.ListLikesCountWithCursor(ctx, limit, cursor)
+	if err != nil {
+		return ListLikesCountResponse{}, err
+	}
+	hasMore := len(videos) == limit
+	feedVideos, err := f.buildFeedVideos(ctx, videos, viewerAccountID)
+	if err != nil {
+		return ListLikesCountResponse{}, err
+	}
+	resp := ListLikesCountResponse{
+		VideoList: feedVideos,
+		HasMore:   hasMore,
+	}
+	if len(videos) > 0 {
+		last := videos[len(videos)-1]
+		nextLikesCountBefore := last.LikesCount
+		nextIDBefore := last.ID
+		resp.NextLikesCountBefore = &nextLikesCountBefore
+		resp.NextIDBefore = &nextIDBefore
+	}
+
+	return resp, nil
 
 }
 
 // 按照关注列表查询视频
 func (f *FeedService) ListByFollowing(ctx context.Context, limit int, latestBefore time.Time, viewerAccountID uint) (ListByFollowingResponse, error) {
+	var cacheKey string
+	if viewerAccountID != 0 && f.rediscache != nil {
+		before := int64(0)
+		if !latestBefore.IsZero() {
+			before = latestBefore.Unix()
+		}
+		cacheKey = f.rediscache.Key("feed:listByFollowing:limit=%d:accountID=%d:before=%d", limit, viewerAccountID, before)
+		cacheCtx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
+		defer cancel()
 
+		b, err := f.rediscache.GetBytes(cacheCtx, cacheKey)
+		if err == nil {
+			var cached ListByFollowingResponse
+			if err := json.Unmarshal(b, &cached); err == nil {
+				return cached, nil
+			}
+		} else if cache.IsMiss(err) { // 缓存未命中，继续走 DB 查询
+			lockKey := "lock:" + cacheKey
+			// 缓存未命中，尝试加锁
+			token, locked, _ := f.rediscache.Lock(cacheCtx, lockKey, 30*time.Second)
+			if locked {
+				defer func() {
+					_ = f.rediscache.Unlock(context.Background(), lockKey, token)
+				}()
+				if b, err := f.rediscache.GetBytes(cacheCtx, cacheKey); err == nil { // 可能此时已经有数据了，先查缓存
+					var cached ListByFollowingResponse
+					if err := json.Unmarshal(b, &cached); err == nil {
+						return cached, nil
+					}
+				} else { // 缓存未命中
+					resp, err := f.ListByFollowingFromDB(ctx, limit, latestBefore, viewerAccountID)
+					if err != nil {
+						return ListByFollowingResponse{}, err
+					}
+					if b, err := json.Marshal(resp); err == nil {
+						_ = f.rediscache.SetBytes(cacheCtx, cacheKey, b, f.cacheTTL)
+					}
+					return resp, nil
+				}
+			} else {
+				// 等待其他 goroutine 完成查询并写入缓存
+				for i := 0; i < 5; i++ {
+					time.Sleep(20 * time.Millisecond)
+					if b, err := f.rediscache.GetBytes(cacheCtx, cacheKey); err == nil {
+						var cached ListByFollowingResponse
+						if err := json.Unmarshal(b, &cached); err == nil {
+							return cached, nil
+						}
+					}
+				}
+			}
+		}
+	}
+	resp, err := f.ListByFollowingFromDB(ctx, limit, latestBefore, viewerAccountID)
+	if err != nil {
+		return ListByFollowingResponse{}, err
+	}
+	if cacheKey != "" {
+		if b, err := json.Marshal(resp); err == nil {
+			cacheCtx, cancel := context.WithTimeout(ctx, 1*time.Minute)
+			defer cancel()
+			_ = f.rediscache.SetBytes(cacheCtx, cacheKey, b, f.cacheTTL)
+		}
+	}
+
+	return resp, nil
+}
+
+func (f *FeedService) ListByFollowingFromDB(ctx context.Context, limit int, latestBefore time.Time, viewerAccountID uint) (ListByFollowingResponse, error) {
+	videos, err := f.repo.ListByFollowing(ctx, limit, viewerAccountID, latestBefore)
+	if err != nil {
+		return ListByFollowingResponse{}, err
+	}
+	var nextTime int64
+	if len(videos) > 0 {
+		nextTime = videos[len(videos)-1].CreateTime.Unix()
+	} else {
+		nextTime = 0
+	}
+	hasMore := len(videos) == limit
+	feedVideos, err := f.buildFeedVideos(ctx, videos, viewerAccountID)
+	if err != nil {
+		return ListByFollowingResponse{}, err
+	}
+	resp := ListByFollowingResponse{
+		VideoList: feedVideos,
+		NextTime:  nextTime,
+		HasMore:   hasMore,
+	}
+
+	return resp, nil
 }
 
 func (f *FeedService) ListByPopularity(ctx context.Context, limit int, reqAsOf int64, offset int, viewerAccountID uint, latestPopularity int64, latestBefore time.Time, latestIDBefore uint) (ListByPopularityResponse, error) {
