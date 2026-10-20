@@ -13,7 +13,7 @@ type FeedRepository struct {
 	db *gorm.DB
 }
 
-func NewfeedRepository(db *gorm.DB) *FeedRepository {
+func NewFeedRepository(db *gorm.DB) *FeedRepository {
 	return &FeedRepository{db: db}
 }
 

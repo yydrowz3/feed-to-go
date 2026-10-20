@@ -5,6 +5,7 @@ import (
 	"feed-to-go/internal/services/account"
 	"feed-to-go/internal/services/chunk"
 	"feed-to-go/internal/services/comment"
+	"feed-to-go/internal/services/feed"
 	"feed-to-go/internal/services/like"
 	"feed-to-go/internal/services/message"
 	"feed-to-go/internal/services/social"
@@ -148,6 +149,22 @@ func SetRouter(db *gorm.DB, cache *cache.Client, rmq *mq.RabbitMQ) *gin.Engine {
 	accountGroup.POST("/getProfile", socialHandler.GetProfile(accountService, videoRepository, socialRepository))
 
 	// feed
+	feedRepository := feed.NewFeedRepository(db)
+	feedService := feed.NewFeedService(feedRepository, likeRepository, cache)
+	feedHandler := feed.NewFeedHandler(feedService)
+	feedGroup := r.Group("/feed")
+	feedGroup.Use(auth.SoftJWTAuth(accountRepository, cache))
+	{
+		feedGroup.POST("/listLatest", feedHandler.ListLatest)
+		feedGroup.POST("/listLikesCount", feedHandler.ListLikesCount)
+		feedGroup.POST("/listByPopularity", feedHandler.ListByPopularity)
+		feedGroup.POST("/listByTag", feedHandler.ListByTag)
+	}
+	protectedFeedGroup := feedGroup.Group("")
+	protectedFeedGroup.Use(auth.JWTAuth(accountRepository, cache))
+	{
+		protectedFeedGroup.POST("/listByFollowing", feedHandler.ListByFollowing)
+	}
 
 	// message
 	messageRepo := message.NewRepository(db)
