@@ -42,3 +42,11 @@ func buildOrderedResult(orderedIDs []uint, dataMap map[uint]*video.Video) []*vid
 
 	return res
 }
+
+func nonNilFeedVideoItems(items []FeedVideoItem) []FeedVideoItem {
+	if items == nil {
+		return []FeedVideoItem{}
+	}
+
+	return items
+}
