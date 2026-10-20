@@ -6,6 +6,7 @@ import (
 	"feed-to-go/internal/services/chunk"
 	"feed-to-go/internal/services/comment"
 	"feed-to-go/internal/services/like"
+	"feed-to-go/internal/services/message"
 	"feed-to-go/internal/services/social"
 	"feed-to-go/internal/services/video"
 	"feed-to-go/pkg/cache"
@@ -149,6 +150,16 @@ func SetRouter(db *gorm.DB, cache *cache.Client, rmq *mq.RabbitMQ) *gin.Engine {
 	// feed
 
 	// message
+	messageRepo := message.NewRepository(db)
+	messageService := message.NewService(messageRepo)
+	messageHandler := message.NewHandler(messageService)
+	messageGroup := r.Group("/message")
+	protectedMessageGroup := messageGroup.Group("")
+	protectedMessageGroup.Use(auth.JWTAuth(accountRepository, cache))
+	{
+		protectedMessageGroup.POST("/send", messageHandler.Send)
+		protectedMessageGroup.POST("/list", messageHandler.List)
+	}
 
 	// worker
 
