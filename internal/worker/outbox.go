@@ -42,7 +42,7 @@ func StartOutboxPoller(db *gorm.DB, tmq *mq.TimelineMQ) {
 	}()
 }
 
-func StartComsumer(tmq *mq.TimelineMQ, queueName string, redisClient *cache.Client, rmq *mq.RabbitMQ) {
+func StartConsumer(tmq *mq.TimelineMQ, queueName string, redisClient *cache.Client, rmq *mq.RabbitMQ) {
 	if tmq == nil || rmq == nil || rmq.Conn == nil {
 		logging.Sugar.Warnf("Timeline consumer disabled: rabbitmq is not initialized")
 		return

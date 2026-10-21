@@ -2,6 +2,13 @@ package persistence
 
 import (
 	"feed-to-go/internal/config"
+	"feed-to-go/internal/services/account"
+	"feed-to-go/internal/services/comment"
+	"feed-to-go/internal/services/like"
+	"feed-to-go/internal/services/message"
+	"feed-to-go/internal/services/social"
+	"feed-to-go/internal/services/video"
+	"feed-to-go/internal/worker"
 	"fmt"
 
 	"gorm.io/driver/postgres"
@@ -22,9 +29,9 @@ func NewDB(dbcfg config.DatabaseConfig) (*gorm.DB, error) {
 
 func AutoMigrate(db *gorm.DB) error {
 	return db.AutoMigrate(
-	// &account.Account{}, &video.Video{}, &video.Like{}, &video.Comment{},
-	// &social.Social{}, &video.OutboxMsg{}, &video.Tag{}, &video.VideoTag{},
-	// &message.Message{}, &worker.Notification{},
+		&account.Account{}, &video.Video{}, &like.Like{}, &comment.Comment{},
+		&social.Social{}, &video.OutboxMsg{}, &video.Tag{}, &video.VideoTag{},
+		&message.Message{}, &worker.Notification{},
 	)
 }
 
