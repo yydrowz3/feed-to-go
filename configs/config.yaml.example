@@ -1,0 +1,27 @@
+server:
+  port: 8080
+
+database:
+  host: 
+  port: 
+  user: 
+  password: 
+  dbname: 
+
+redis:
+  host: 
+  port: 
+  password: 
+  db: 
+
+rabbitmq:
+  host: 
+  port: 
+  username: 
+  password: 
+  
+observability:
+  pprof:
+    enabled: true
+    api_addr: localhost:6060
+    worker_addr: localhost:6061
