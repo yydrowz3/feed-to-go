@@ -170,3 +170,7 @@ pnpm dev
 - 步骤 5：完成 Zustand 会话、旧存储键恢复、存储异常容错、登录/退出递增 sessionId、同会话刷新/改名更新；统一 Query 默认值和 key 工厂；会话变化取消请求及注册任务、清缓存并重新计算路由鉴权。
   - 检查：`pnpm test` 25/25 通过；`pnpm build` 通过；`pnpm lint` 无错误、原有 3 条模板警告。测试实际运行 QueryClient，确认旧请求 signal 被取消、缓存被清理及订阅销毁。
 - 本阶段交付结论：未开始。
+- 步骤 5 commit：`d6f4309` — `✨ feat(auth): persist sessions and isolate query lifecycle`。
+- 步骤 6：建立全部目标文件路由和阶段占位、正安全整数 ID 校验、站内 redirect 校验、保留 q 的 /feed 跳转、响应式导航和 TanStack Form 搜索、night 主题、唯一 Toaster，以及状态/头像/字段/原生确认弹窗等共享组件。由启动的 Vite 插件生成 routeTree，未手写生成树。
+  - 检查：`pnpm test` 28/28 通过；`pnpm build` 通过；`pnpm lint` 无错误，仅剩 `/about` 示例页 1 条既有 Fast Refresh 警告。构建提示主包超过 500 kB，留待后续阶段评估分包。
+  - `pnpm dev --host 127.0.0.1` 启动成功。浏览器工具未发现可用浏览器，尝试创建内嵌浏览器返回 `Browser is not available: iab`；视觉布局、键盘和真实路由操作验收待完成，未标记通过。

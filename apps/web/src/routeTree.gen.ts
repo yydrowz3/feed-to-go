@@ -11,6 +11,20 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as AccountRouteImport } from './routes/account'
+import { Route as FeedRouteImport } from './routes/feed'
+import { Route as HotRouteImport } from './routes/hot'
+import { Route as MessagesRouteImport } from './routes/messages'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as VideoRouteImport } from './routes/video'
+import { Route as AccountIndexRouteImport } from './routes/account.index'
+import { Route as AccountChangePasswordRouteImport } from './routes/account.change-password'
+import { Route as AccountRegisterRouteImport } from './routes/account.register'
+import { Route as MessagesIndexRouteImport } from './routes/messages.index'
+import { Route as MessagesPeerIdRouteImport } from './routes/messages.$peerId'
+import { Route as UIdRouteImport } from './routes/u.$id'
+import { Route as VideoIndexRouteImport } from './routes/video.index'
+import { Route as VideoIdRouteImport } from './routes/video.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +36,193 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedRoute = FeedRouteImport.update({
+  id: '/feed',
+  path: '/feed',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HotRoute = HotRouteImport.update({
+  id: '/hot',
+  path: '/hot',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MessagesRoute = MessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VideoRoute = VideoRouteImport.update({
+  id: '/video',
+  path: '/video',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountIndexRoute = AccountIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountChangePasswordRoute = AccountChangePasswordRouteImport.update({
+  id: '/change-password',
+  path: '/change-password',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountRegisterRoute = AccountRegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => AccountRoute,
+} as any)
+const MessagesIndexRoute = MessagesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MessagesRoute,
+} as any)
+const MessagesPeerIdRoute = MessagesPeerIdRouteImport.update({
+  id: '/$peerId',
+  path: '/$peerId',
+  getParentRoute: () => MessagesRoute,
+} as any)
+const UIdRoute = UIdRouteImport.update({
+  id: '/u/$id',
+  path: '/u/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VideoIndexRoute = VideoIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => VideoRoute,
+} as any)
+const VideoIdRoute = VideoIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => VideoRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/account': typeof AccountRouteWithChildren
+  '/feed': typeof FeedRoute
+  '/hot': typeof HotRoute
+  '/messages': typeof MessagesRouteWithChildren
+  '/settings': typeof SettingsRoute
+  '/video': typeof VideoRouteWithChildren
+  '/account/change-password': typeof AccountChangePasswordRoute
+  '/account/register': typeof AccountRegisterRoute
+  '/messages/$peerId': typeof MessagesPeerIdRoute
+  '/u/$id': typeof UIdRoute
+  '/video/$id': typeof VideoIdRoute
+  '/account/': typeof AccountIndexRoute
+  '/messages/': typeof MessagesIndexRoute
+  '/video/': typeof VideoIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/feed': typeof FeedRoute
+  '/hot': typeof HotRoute
+  '/settings': typeof SettingsRoute
+  '/account/change-password': typeof AccountChangePasswordRoute
+  '/account/register': typeof AccountRegisterRoute
+  '/messages/$peerId': typeof MessagesPeerIdRoute
+  '/u/$id': typeof UIdRoute
+  '/video/$id': typeof VideoIdRoute
+  '/account': typeof AccountIndexRoute
+  '/messages': typeof MessagesIndexRoute
+  '/video': typeof VideoIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/account': typeof AccountRouteWithChildren
+  '/feed': typeof FeedRoute
+  '/hot': typeof HotRoute
+  '/messages': typeof MessagesRouteWithChildren
+  '/settings': typeof SettingsRoute
+  '/video': typeof VideoRouteWithChildren
+  '/account/change-password': typeof AccountChangePasswordRoute
+  '/account/register': typeof AccountRegisterRoute
+  '/messages/$peerId': typeof MessagesPeerIdRoute
+  '/u/$id': typeof UIdRoute
+  '/video/$id': typeof VideoIdRoute
+  '/account/': typeof AccountIndexRoute
+  '/messages/': typeof MessagesIndexRoute
+  '/video/': typeof VideoIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/account'
+    | '/feed'
+    | '/hot'
+    | '/messages'
+    | '/settings'
+    | '/video'
+    | '/account/change-password'
+    | '/account/register'
+    | '/messages/$peerId'
+    | '/u/$id'
+    | '/video/$id'
+    | '/account/'
+    | '/messages/'
+    | '/video/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about'
-  id: '__root__' | '/' | '/about'
+  to:
+    | '/'
+    | '/about'
+    | '/feed'
+    | '/hot'
+    | '/settings'
+    | '/account/change-password'
+    | '/account/register'
+    | '/messages/$peerId'
+    | '/u/$id'
+    | '/video/$id'
+    | '/account'
+    | '/messages'
+    | '/video'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/account'
+    | '/feed'
+    | '/hot'
+    | '/messages'
+    | '/settings'
+    | '/video'
+    | '/account/change-password'
+    | '/account/register'
+    | '/messages/$peerId'
+    | '/u/$id'
+    | '/video/$id'
+    | '/account/'
+    | '/messages/'
+    | '/video/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  AccountRoute: typeof AccountRouteWithChildren
+  FeedRoute: typeof FeedRoute
+  HotRoute: typeof HotRoute
+  MessagesRoute: typeof MessagesRouteWithChildren
+  SettingsRoute: typeof SettingsRoute
+  VideoRoute: typeof VideoRouteWithChildren
+  UIdRoute: typeof UIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +241,158 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feed': {
+      id: '/feed'
+      path: '/feed'
+      fullPath: '/feed'
+      preLoaderRoute: typeof FeedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hot': {
+      id: '/hot'
+      path: '/hot'
+      fullPath: '/hot'
+      preLoaderRoute: typeof HotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/messages': {
+      id: '/messages'
+      path: '/messages'
+      fullPath: '/messages'
+      preLoaderRoute: typeof MessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/video': {
+      id: '/video'
+      path: '/video'
+      fullPath: '/video'
+      preLoaderRoute: typeof VideoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/': {
+      id: '/account/'
+      path: '/'
+      fullPath: '/account/'
+      preLoaderRoute: typeof AccountIndexRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/change-password': {
+      id: '/account/change-password'
+      path: '/change-password'
+      fullPath: '/account/change-password'
+      preLoaderRoute: typeof AccountChangePasswordRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/register': {
+      id: '/account/register'
+      path: '/register'
+      fullPath: '/account/register'
+      preLoaderRoute: typeof AccountRegisterRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/messages/': {
+      id: '/messages/'
+      path: '/'
+      fullPath: '/messages/'
+      preLoaderRoute: typeof MessagesIndexRouteImport
+      parentRoute: typeof MessagesRoute
+    }
+    '/messages/$peerId': {
+      id: '/messages/$peerId'
+      path: '/$peerId'
+      fullPath: '/messages/$peerId'
+      preLoaderRoute: typeof MessagesPeerIdRouteImport
+      parentRoute: typeof MessagesRoute
+    }
+    '/u/$id': {
+      id: '/u/$id'
+      path: '/u/$id'
+      fullPath: '/u/$id'
+      preLoaderRoute: typeof UIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/video/': {
+      id: '/video/'
+      path: '/'
+      fullPath: '/video/'
+      preLoaderRoute: typeof VideoIndexRouteImport
+      parentRoute: typeof VideoRoute
+    }
+    '/video/$id': {
+      id: '/video/$id'
+      path: '/$id'
+      fullPath: '/video/$id'
+      preLoaderRoute: typeof VideoIdRouteImport
+      parentRoute: typeof VideoRoute
+    }
   }
 }
+
+interface AccountRouteChildren {
+  AccountChangePasswordRoute: typeof AccountChangePasswordRoute
+  AccountRegisterRoute: typeof AccountRegisterRoute
+  AccountIndexRoute: typeof AccountIndexRoute
+}
+
+const AccountRouteChildren: AccountRouteChildren = {
+  AccountChangePasswordRoute: AccountChangePasswordRoute,
+  AccountRegisterRoute: AccountRegisterRoute,
+  AccountIndexRoute: AccountIndexRoute,
+}
+
+const AccountRouteWithChildren =
+  AccountRoute._addFileChildren(AccountRouteChildren)
+
+interface MessagesRouteChildren {
+  MessagesPeerIdRoute: typeof MessagesPeerIdRoute
+  MessagesIndexRoute: typeof MessagesIndexRoute
+}
+
+const MessagesRouteChildren: MessagesRouteChildren = {
+  MessagesPeerIdRoute: MessagesPeerIdRoute,
+  MessagesIndexRoute: MessagesIndexRoute,
+}
+
+const MessagesRouteWithChildren = MessagesRoute._addFileChildren(
+  MessagesRouteChildren,
+)
+
+interface VideoRouteChildren {
+  VideoIdRoute: typeof VideoIdRoute
+  VideoIndexRoute: typeof VideoIndexRoute
+}
+
+const VideoRouteChildren: VideoRouteChildren = {
+  VideoIdRoute: VideoIdRoute,
+  VideoIndexRoute: VideoIndexRoute,
+}
+
+const VideoRouteWithChildren = VideoRoute._addFileChildren(VideoRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  AccountRoute: AccountRouteWithChildren,
+  FeedRoute: FeedRoute,
+  HotRoute: HotRoute,
+  MessagesRoute: MessagesRouteWithChildren,
+  SettingsRoute: SettingsRoute,
+  VideoRoute: VideoRouteWithChildren,
+  UIdRoute: UIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
