@@ -11,7 +11,9 @@ import { routeTree } from './routeTree.gen'
 
 // Create a new router instance
 function createApplication(value: unknown) {
-  const runtime = createRuntime(value)
+  let storage: Storage | undefined
+  try { storage = window.localStorage } catch { /* Storage may be disabled. */ }
+  const runtime = createRuntime(value, { storage })
   const router = createRouter({ routeTree, context: runtime, trailingSlash: 'never' })
   runtime.setRouterInvalidation(() => { void router.invalidate() })
   return { runtime, router }

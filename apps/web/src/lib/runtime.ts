@@ -1,22 +1,16 @@
 import { QueryClient } from '@tanstack/react-query'
 import { createAuthStore } from '../stores/auth.ts'
+import type { TokenStorage } from '../stores/auth.ts'
 import { parseApiBase } from './config.ts'
 import { createApiClient } from '../api/client.ts'
 import { createBusinessApi } from '../api/index.ts'
-export function createRuntime(value: unknown) {
+export function createRuntime(value: unknown, options: { storage?: TokenStorage; fetchImpl?: typeof fetch } = {}) {
   const baseUrl = parseApiBase(value)
-  const authStore = createAuthStore()
-  const api = createApiClient({ baseUrl, auth: {
-    getSession: authStore.getState,
-    updateTokens(sessionId, expectedToken, accessToken, refreshToken) {
-      const current = authStore.getState()
-      if (current.sessionId === sessionId && current.accessToken === expectedToken) authStore.setState({ accessToken, refreshToken: refreshToken ?? current.refreshToken })
-    },
-    clearSession(sessionId) {
-      if (authStore.getState().sessionId === sessionId) authStore.setState({ accessToken: '', refreshToken: '', sessionId: sessionId + 1 })
-    },
+  const authStore = createAuthStore(options.storage)
+  const api = createApiClient({ baseUrl, fetchImpl: options.fetchImpl, auth: authStore.getState() })
+  const queryClient = new QueryClient({ defaultOptions: {
+    queries: { retry: false, staleTime: 30_000, refetchOnWindowFocus: false }, mutations: { retry: false },
   } })
-  const queryClient = new QueryClient()
   const taskCancels = new Set<() => void>()
   let invalidate = () => {}
   const unsubscribe = authStore.subscribe((state, previous) => {
@@ -32,7 +26,7 @@ export function createRuntime(value: unknown) {
     baseUrl, authStore, api, services: createBusinessApi(api), queryClient,
     setRouterInvalidation(callback: () => void) { invalidate = callback },
     registerSessionTask(cancel: () => void) { taskCancels.add(cancel); return () => { taskCancels.delete(cancel) } },
-    dispose() { unsubscribe(); taskCancels.forEach(cancel => cancel()); taskCancels.clear() },
+    dispose() { unsubscribe(); api.cancelSession(authStore.getState().sessionId); void queryClient.cancelQueries(); queryClient.clear(); taskCancels.forEach(cancel => cancel()); taskCancels.clear() },
   }
 }
 export type AppRuntime = ReturnType<typeof createRuntime>

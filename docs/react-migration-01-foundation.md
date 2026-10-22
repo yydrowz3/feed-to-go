@@ -166,4 +166,7 @@ pnpm dev
 - 步骤 4：建立 wire DTO、归一化与 account/feed/video/like/social/comment/message API 工厂；所有方法支持 signal。修正作者列表路径、following_id/followings 字段，保留头像简介、热榜数据库回退游标和各时间单位。
   - 检查：`pnpm test` 20/20 通过；`pnpm build` 通过；`pnpm lint` 无错误、原有 3 条模板警告。接口契约逐项对照 Go router、entity 和 handler。
 - 后端/CORS 阻塞及未完成项：待填写。
+- 步骤 4 commit：`c4c1108` — `✨ feat(web): align domain APIs and DTOs with Go backend`。
+- 步骤 5：完成 Zustand 会话、旧存储键恢复、存储异常容错、登录/退出递增 sessionId、同会话刷新/改名更新；统一 Query 默认值和 key 工厂；会话变化取消请求及注册任务、清缓存并重新计算路由鉴权。
+  - 检查：`pnpm test` 25/25 通过；`pnpm build` 通过；`pnpm lint` 无错误、原有 3 条模板警告。测试实际运行 QueryClient，确认旧请求 signal 被取消、缓存被清理及订阅销毁。
 - 本阶段交付结论：未开始。
