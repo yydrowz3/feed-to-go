@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"go.yaml.in/yaml/v3"
 )
@@ -18,7 +19,8 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port int `yaml:"port"`
+	Port   int    `yaml:"port"`
+	WebURL string `yaml:"-"`
 }
 
 type DatabaseConfig struct {
@@ -76,7 +78,13 @@ func ApplyEnvOverrides(cfg *Config) {
 	}
 
 	// 除 observability 外，配置从环境变量读取；PORT 默认使用 8095。
-	cfg.Server = ServerConfig{Port: 8095}
+	cfg.Server = ServerConfig{
+		Port:   8095,
+		WebURL: strings.TrimSpace(os.Getenv("WEB_URL")),
+	}
+	if cfg.Server.WebURL == "" {
+		cfg.Server.WebURL = "http://localhost:5173"
+	}
 	if port, err := strconv.Atoi(os.Getenv("PORT")); err == nil {
 		cfg.Server.Port = port
 	}
