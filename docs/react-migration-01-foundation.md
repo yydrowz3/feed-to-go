@@ -154,6 +154,9 @@ pnpm dev
 - 步骤 1：建立运行时组装、单一 QueryClient Provider 和 Router context、配置错误界面、会话协调订阅及销毁入口；保留 StrictMode、现有插件和 CSS。配置解析提前建立以保证入口可用，完整工具在步骤 2 补齐，会话实现于步骤 5 完善。
   - 检查：`pnpm test` 1/1 通过；`pnpm build` 通过；`pnpm lint` 无错误，保留原有 3 条模板 Fast Refresh 警告。
 - 各编号步骤的完成内容、检查结果及 commit 清单：待填写；提交 hash 在创建后反馈，不为回填自身 hash 创建额外提交。
+- 步骤 1 commit：`ad67b24` — `✨ feat(web): establish application runtime and shared query context`。
+- 步骤 2：提供直连 URL 拼接、后端 origin 媒体补全、中文 JWT 身份解码和动态加载 hash-wasm 的独立 MD5 工具；文件按 2 MiB 读取，支持进度和取消。
+  - 检查：`pnpm test` 5/5 通过，覆盖已知向量、二进制、跨 2 MiB 边界、并行独立哈希与取消；`pnpm build` 通过。
 - 自动检查命令及结果：待填写。
 - 浏览器直连与鉴权验证：待填写。
 - 后端/CORS 阻塞及未完成项：待填写。

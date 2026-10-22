@@ -7,3 +7,8 @@ export function parseApiBase(value: unknown): string {
   }
   return url.href.replace(/\/+$/, '')
 }
+
+export function apiUrl(baseUrl: string, path: string): string {
+  if (!path.startsWith('/') || path.startsWith('//') || /[\\?#]/.test(path)) throw new Error('接口路径必须以单个 / 开头且不含查询、片段或反斜杠')
+  return `${baseUrl}${path}`
+}
