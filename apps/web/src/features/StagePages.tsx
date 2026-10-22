@@ -11,17 +11,11 @@ export function PublishPage() {
 export function VideoPage() {
   return <StagePlaceholder title="视频详情" stage="02" />;
 }
-export function AccountPage() {
-  return <StagePlaceholder title="登录与账号" stage="01 · 步骤 7" />;
-}
 export function RegisterPage() {
   return <StagePlaceholder title="注册账号" stage="03" />;
 }
 export function ChangePasswordPage() {
   return <StagePlaceholder title="修改密码" stage="03" />;
-}
-export function SettingsPage() {
-  return <StagePlaceholder title="账号设置" stage="01 · 步骤 7" />;
 }
 export function ProfilePage() {
   return <StagePlaceholder title="用户主页" stage="03" />;

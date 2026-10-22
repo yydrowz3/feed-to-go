@@ -14,6 +14,7 @@ test("redirects accept only internal non-login targets", () => {
     "/%2f%2fevil.test",
     "/%255cevil.test",
     "/account",
+    "/ACCOUNT",
     "/account/?q=x",
     "/x/../account",
     "/account#x",

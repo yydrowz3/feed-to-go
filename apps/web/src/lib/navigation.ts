@@ -21,7 +21,10 @@ export function safeRedirect(value: unknown): string | undefined {
     if (!decoded.startsWith("/") || decoded.startsWith("//") || hasUnsafeCharacters(decoded))
       return undefined;
     const url = new URL(decoded, "https://app.invalid");
-    if (url.origin !== "https://app.invalid" || url.pathname.replace(/\/+$/, "") === "/account")
+    if (
+      url.origin !== "https://app.invalid" ||
+      url.pathname.replace(/\/+$/, "").toLowerCase() === "/account"
+    )
       return undefined;
     return value;
   } catch {

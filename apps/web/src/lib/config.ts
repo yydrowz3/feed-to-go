@@ -1,14 +1,29 @@
 export function parseApiBase(value: unknown): string {
-  if (typeof value !== 'string' || !value.trim()) throw new Error('请配置 VITE_API_BASE 为后端 HTTP(S) 绝对地址')
-  let url: URL
-  try { url = new URL(value.trim()) } catch { throw new Error('VITE_API_BASE 必须是 HTTP(S) 绝对地址') }
-  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
-    throw new Error('VITE_API_BASE 不允许非 HTTP(S) 协议、凭据、查询参数或片段')
+  if (typeof value !== "string" || !value.trim())
+    throw new Error("请配置 VITE_API_BASE 为后端 HTTP(S) 绝对地址");
+  const input = value.trim();
+  if (!/^https?:\/\//i.test(input) || input.includes("\\"))
+    throw new Error("VITE_API_BASE 必须是 HTTP(S) 绝对地址");
+  let url: URL;
+  try {
+    url = new URL(input);
+  } catch {
+    throw new Error("VITE_API_BASE 必须是 HTTP(S) 绝对地址");
   }
-  return url.href.replace(/\/+$/, '')
+  if (
+    !["http:", "https:"].includes(url.protocol) ||
+    url.username ||
+    url.password ||
+    input.includes("?") ||
+    input.includes("#")
+  ) {
+    throw new Error("VITE_API_BASE 不允许非 HTTP(S) 协议、凭据、查询参数或片段");
+  }
+  return url.href.replace(/\/+$/, "");
 }
 
 export function apiUrl(baseUrl: string, path: string): string {
-  if (!path.startsWith('/') || path.startsWith('//') || /[\\?#]/.test(path)) throw new Error('接口路径必须以单个 / 开头且不含查询、片段或反斜杠')
-  return `${baseUrl}${path}`
+  if (!path.startsWith("/") || path.startsWith("//") || /[\\?#]/.test(path))
+    throw new Error("接口路径必须以单个 / 开头且不含查询、片段或反斜杠");
+  return `${baseUrl}${path}`;
 }

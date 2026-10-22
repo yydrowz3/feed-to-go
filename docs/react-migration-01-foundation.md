@@ -142,35 +142,44 @@ pnpm dev
 - [ ] 匿名访问 `/video`、`/settings`、`/messages` 被拦截，但 `/video/1`、注册和改密码仍公开。
 - [ ] `/feed?q=文字` 返回首页并保留搜索；未知路由和非法 ID 有明确界面。
 - [ ] 桌面侧栏、移动端导航、搜索、主题和唯一 Toaster 正常。
-- [ ] 当前阶段代码构建通过；记录剩余示例页 Lint 警告，最终在 05 清零。
+- [x] 当前阶段代码构建通过；记录剩余示例页 Lint 警告，最终在 05 清零。
 
 ## 交接给阶段 02
 
 交付可复用的请求实例、领域 API、类型、auth Store、QueryClient / key 工厂、登录跳转工具、共享组件、哈希工具和测试入口。阶段 02 只替换对应占位页，不重新实现这些基础设施。
 
-### 实施记录（完成时填写）
+### 实施记录（2026-10-22）
 
-- 实施日期与变更摘要：2026-10-22，开始阶段 01；后端/CORS 暂未就绪，用户要求先完成代码与自动测试。
+- 实施日期与变更摘要：2026-10-22，完成阶段 01 代码实现；后端/CORS 暂未就绪，用户明确要求先完成代码与自动测试。未进入阶段 02，未修改后端、依赖版本、锁文件、真实 .env、.gitignore 或 _deprecated，未 push 或部署。
 - 步骤 1：建立运行时组装、单一 QueryClient Provider 和 Router context、配置错误界面、会话协调订阅及销毁入口；保留 StrictMode、现有插件和 CSS。配置解析提前建立以保证入口可用，完整工具在步骤 2 补齐，会话实现于步骤 5 完善。
   - 检查：`pnpm test` 1/1 通过；`pnpm build` 通过；`pnpm lint` 无错误，保留原有 3 条模板 Fast Refresh 警告。
-- 各编号步骤的完成内容、检查结果及 commit 清单：待填写；提交 hash 在创建后反馈，不为回填自身 hash 创建额外提交。
 - 步骤 1 commit：`ad67b24` — `✨ feat(web): establish application runtime and shared query context`。
 - 步骤 2：提供直连 URL 拼接、后端 origin 媒体补全、中文 JWT 身份解码和动态加载 hash-wasm 的独立 MD5 工具；文件按 2 MiB 读取，支持进度和取消。
   - 检查：`pnpm test` 5/5 通过，覆盖已知向量、二进制、跨 2 MiB 边界、并行独立哈希与取消；`pnpm build` 通过。
-- 自动检查命令及结果：待填写。
 - 步骤 2 commit：`912ce93` — `✨ feat(web): add direct URL JWT and incremental MD5 tools`。
 - 步骤 3：实现可注入 fetch/会话访问器的 API 客户端、JSON/FormData、类型化 HTTP 错误、单次重放、同会话共享刷新、旧会话隔离和独立请求取消；组装入口创建客户端。
   - 检查：`pnpm test` 16/16 通过；`pnpm build` 通过；`pnpm lint` 无错误、原有 3 条模板警告。覆盖迟到 401、刷新未返回 refresh token、FormData boundary、退出/换号、改名竞态、取消与错误类型。
-- 浏览器直连与鉴权验证：待填写。
 - 步骤 3 commit：`cbd668b` — `✨ feat(web): add session-safe API client and shared token refresh`。
 - 步骤 4：建立 wire DTO、归一化与 account/feed/video/like/social/comment/message API 工厂；所有方法支持 signal。修正作者列表路径、following_id/followings 字段，保留头像简介、热榜数据库回退游标和各时间单位。
   - 检查：`pnpm test` 20/20 通过；`pnpm build` 通过；`pnpm lint` 无错误、原有 3 条模板警告。接口契约逐项对照 Go router、entity 和 handler。
-- 后端/CORS 阻塞及未完成项：待填写。
 - 步骤 4 commit：`c4c1108` — `✨ feat(web): align domain APIs and DTOs with Go backend`。
 - 步骤 5：完成 Zustand 会话、旧存储键恢复、存储异常容错、登录/退出递增 sessionId、同会话刷新/改名更新；统一 Query 默认值和 key 工厂；会话变化取消请求及注册任务、清缓存并重新计算路由鉴权。
   - 检查：`pnpm test` 25/25 通过；`pnpm build` 通过；`pnpm lint` 无错误、原有 3 条模板警告。测试实际运行 QueryClient，确认旧请求 signal 被取消、缓存被清理及订阅销毁。
-- 本阶段交付结论：未开始。
 - 步骤 5 commit：`d6f4309` — `✨ feat(auth): persist sessions and isolate query lifecycle`。
 - 步骤 6：建立全部目标文件路由和阶段占位、正安全整数 ID 校验、站内 redirect 校验、保留 q 的 /feed 跳转、响应式导航和 TanStack Form 搜索、night 主题、唯一 Toaster，以及状态/头像/字段/原生确认弹窗等共享组件。由启动的 Vite 插件生成 routeTree，未手写生成树。
-  - 检查：`pnpm test` 28/28 通过；`pnpm build` 通过；`pnpm lint` 无错误，仅剩 `/about` 示例页 1 条既有 Fast Refresh 警告。构建提示主包超过 500 kB，留待后续阶段评估分包。
+  - 检查：`pnpm test` 28/28 通过；`pnpm build` 通过；`pnpm lint` 无错误，仅剩 `/about` 示例页 1 条既有 Fast Refresh 警告。本步曾出现主包超过 500 kB 提示，步骤 7 接入独立账号页面后由自动拆分消除。
   - `pnpm dev --host 127.0.0.1` 启动成功。浏览器工具未发现可用浏览器，尝试创建内嵌浏览器返回 `Browser is not available: iab`；视觉布局、键盘和真实路由操作验收待完成，未标记通过。
+- 步骤 6 commit：`267018d` — `✨ feat(web): add guarded routes and responsive application shell`。
+- 步骤 7：TanStack Form + Zod 最小登录、字段错误和服务端错误、提交互斥、成功清空密码、身份展示与安全返回目标；退出使用共享确认弹窗，无论服务端响应如何都清理发起操作的本地会话，旧退出不会干扰后来登录的账号。补齐登录迟到响应/卸载取消和退出失败测试，并收紧配置及大小写登录循环目标校验。
+  - 检查：`pnpm test` 34/34 通过；`pnpm build` 通过（主包约 334 kB，gzip 约 101 kB，无 chunk 大小警告）；`pnpm lint` 无错误，剩 `/about` 示例页 1 条既有 Fast Refresh 警告；`git diff --check` 通过。
+  - 使用 Vite 的 SSR 模块加载和内存 history 对实际生成树执行匹配，并逐层调用其 beforeLoad：匿名发布/设置/私信 4 项、公开详情/注册/改密码 3 项、保留 q 的 /feed 跳转 1 项、非法资源 ID 2 项，共 10 项通过。此检查验证路由匹配与守卫接线，不替代浏览器导航、渲染和网络验收。
+  - 本步 commit 标题为 `✨ feat(auth): implement minimal login and confirmed logout`；hash 在提交后的执行反馈中提供，不为回填自身 hash 创建额外提交。
+
+#### 最终检查与后续事项
+
+- 自动检查入口均从 `apps/web` 执行：`pnpm test`、`pnpm build`、`pnpm lint`。Node v26.12.1 原生执行 `.test.mjs` 并导入纯 `.ts`，未增加测试框架或转换器。
+- 静态核对：唯一 QueryClient、唯一 Toaster；保留两行 index.css；运行源代码不导入 _deprecated，不使用业务内联 style、自定义 CSS 或代理，不调用 error-report；API 测试确认 JSON/FormData 直连绝对后端地址并传递 signal。
+- 外部阻塞：用户确认后端和 CORS 尚未就绪；无测试账号真实联调。当前浏览器工具不可用。缺配置界面、真实登录/持久化/刷新/退出/返回原页、跨 origin 预检及错误响应、桌面/移动端布局、弹窗 Esc/遮罩/焦点返回、浏览器 WASM 加载均待真实浏览器验收。
+- 后续：后端允许实际前端 origin、POST、Authorization、Content-Type、OPTIONS 及错误响应后，配置本地 VITE_API_BASE 并补齐上方未勾选的人工验收。账号凭据由用户在浏览器输入，不写入文档和日志。
+- 阶段 02 沿用 runtime.services、runtime.authStore、runtime.queryClient、queryKeys、共享状态组件与哈希工具，仅替换本阶段的对应占位页。示例 `/about` 留待阶段 05 清理。
+- 本阶段交付结论：代码实现和自动检查完成；真实直连及浏览器人工验收待完成，阶段总验收未通过，索引阶段完成框保持未勾选。
