@@ -158,6 +158,9 @@ pnpm dev
 - 步骤 2：提供直连 URL 拼接、后端 origin 媒体补全、中文 JWT 身份解码和动态加载 hash-wasm 的独立 MD5 工具；文件按 2 MiB 读取，支持进度和取消。
   - 检查：`pnpm test` 5/5 通过，覆盖已知向量、二进制、跨 2 MiB 边界、并行独立哈希与取消；`pnpm build` 通过。
 - 自动检查命令及结果：待填写。
+- 步骤 2 commit：`912ce93` — `✨ feat(web): add direct URL JWT and incremental MD5 tools`。
+- 步骤 3：实现可注入 fetch/会话访问器的 API 客户端、JSON/FormData、类型化 HTTP 错误、单次重放、同会话共享刷新、旧会话隔离和独立请求取消；组装入口创建客户端。
+  - 检查：`pnpm test` 16/16 通过；`pnpm build` 通过；`pnpm lint` 无错误、原有 3 条模板警告。覆盖迟到 401、刷新未返回 refresh token、FormData boundary、退出/换号、改名竞态、取消与错误类型。
 - 浏览器直连与鉴权验证：待填写。
 - 后端/CORS 阻塞及未完成项：待填写。
 - 本阶段交付结论：未开始。
