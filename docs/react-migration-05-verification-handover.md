@@ -2,7 +2,7 @@
 
 前置：阶段 01～04 已实施，见 [执行索引](react-migration-00-index.md)。本阶段是迁移最终验收，不部署、不 push、不引入新业务功能。
 
-执行要求：下方 6 个编号实施步骤逐个完成、逐个本地 Git commit，先完成本步相关检查和记录再提交，不积攒到阶段末。提交信息遵循 [commit-conventions.md](commit-conventions.md)，不含 `Co-authored-by` 或共同作者声明；范围和核对流程遵循 [逐步骤提交要求](react-migration-00-index.md#逐步骤-git-提交要求)。纯审计或验证步骤也要保存实际结果并提交该记录，不创建空提交。
+执行要求：下方 6 个编号实施步骤逐个完成、逐个本地 Git commit，先完成本步相关检查和记录再提交，不积攒到阶段末。每次生成和提交的完整 commit message 必须包含标题及非空正文，提交后反馈 hash 和完整 message（标题和正文）。提交信息遵循 [commit-conventions.md](commit-conventions.md)，不含 `Co-authored-by` 或共同作者声明；范围和核对流程遵循 [逐步骤提交要求](react-migration-00-index.md#逐步骤-git-提交要求)。纯审计或验证步骤也要保存实际结果并提交该记录，不创建空提交。
 
 ## 目标与进入条件
 

@@ -37,20 +37,27 @@
 - **检查失败**：先修复本步引入的问题并重新检查，不将明确失败的实现标记完成。外部联调阻塞或尚未建立的后续检查要如实记录，不声称已经通过；完成的可独立验证改动可以提交，但阶段联调仍标为待完成。
 - **只提交本步内容**：先检查 git status、工作区 diff 和暂存区 diff，只按路径或补丁暂存本步改动。保留用户原有工作区和暂存内容，不能用无差别 git add、reset 或清理操作把无关修改混入或移除。
 - **纯验证步骤**：阶段 05 的审计、回归等步骤，即使没有代码修复，也要写入本步实际结果，再提交该实施记录；不创建空提交，不虚构代码变更。若步骤已由既有提交完整实现，记录并引用该提交，不重复制造相同改动。
-- **提交信息**：严格遵循 [commit-conventions.md](commit-conventions.md)。标题为 `<emoji> <type>(<scope>): <description>`，description 使用英文祈使句、首字母小写、无句号，标题建议不超过 72 个字符；type、Emoji 和 scope 与实际变更对应。复杂步骤按 convention 补充 Why / What / Impact；破坏性变更按要求说明。
+- **提交信息**：每一步都必须生成并提交包含标题和非空正文的完整 commit message，严格遵循 [commit-conventions.md](commit-conventions.md)，不能只生成或提交标题。标题为 `<emoji> <type>(<scope>): <description>`，description 使用英文祈使句、首字母小写、无句号，标题建议不超过 72 个字符；type、Emoji 和 scope 与实际变更对应。正文说明变更原因、主要内容、影响及实际检查结果，建议按 Why / What / Impact 组织；破坏性变更按要求说明。
 - **不写共同作者信息**：标题、正文和 trailers 均不出现 `Co-authored-by`、`Co authored by` 或任何大小写形式的共同作者声明；不附加自动生成的共同作者署名。使用当前仓库正常 Git 作者配置。
 - **提交后核对**：查看最新提交的 hash、完整 message 和文件范围，确认无共同作者信息、无无关文件。若工具或 hook 自动附加该信息，修正本次自己刚创建的提交后再继续，不改写用户已有历史。
-- **记录交付**：每步完成后在执行反馈中给出步骤编号、commit 短 hash 和标题；阶段实施记录列出步骤、修改摘要和检查结果。当前提交自身 hash 可在后续记录或阶段反馈列出，不为回填自身 hash 循环创建提交。
+- **记录交付**：每步完成后在执行反馈中给出步骤编号、commit 短 hash，以及一个文本代码块中的完整 commit message（标题、空行和正文），内容须与实际提交一致；阶段实施记录列出步骤、修改摘要和检查结果。当前提交自身 hash 可在后续记录或阶段反馈列出，不为回填自身 hash 循环创建提交。
 - **明确禁止 push**：所有提交仅保存在本地；不运行 git push，也不以创建远程 PR 等操作替代本地提交。提交遇到身份、hook 或 Git 错误时保留改动并报告原因，不跳过校验或自动进入下一步。
 
-提交标题示例（按实际步骤选择 type 和描述，不直接套用整个阶段名）：
+完整提交信息示例（按实际步骤填写标题和正文，不直接套用整个阶段名，不虚构检查结果）：
 
 ```text
 ✨ feat(web): add direct backend client
-✨ feat(feed): implement cursor pagination
-🐛 fix(auth): preserve refresh token after rename
-✨ feat(publish): add sequential chunk uploads
-📝 docs(web): record migration verification results
+
+Why:
+- Allow the React application to call the Go backend directly.
+
+What:
+- Add JSON and FormData requests with session-aware token refresh.
+- Forward abort signals and preserve typed HTTP errors.
+
+Impact:
+- Share one API client across feature modules without adding a proxy.
+- Verify refresh and cancellation with injected fetch tests.
 ```
 
 ## 阶段间共享契约
@@ -106,6 +113,6 @@
 
 ## 单阶段任务指令模板
 
-> 阅读 docs/react-migration-plan.md、docs/react-migration-00-index.md、docs/commit-conventions.md，以及本次指定的阶段文档。仅实施阶段 XX；先核对前置交付物和当前代码，复用已有实现，遵守依赖、样式和后端直连约束。每完成一个编号实施步骤，完成相关检查与记录后立即创建一次本地 Git commit，信息遵循 convention；反馈 commit hash 和标题后再进入下一步。完成该阶段测试与人工验证，记录实际结果和阻塞，更新阶段交接记录。不要自动进入下一阶段，不要 push 或上线。
+> 阅读 docs/react-migration-plan.md、docs/react-migration-00-index.md、docs/commit-conventions.md，以及本次指定的阶段文档。仅实施阶段 XX；先核对前置交付物和当前代码，复用已有实现，遵守依赖、样式和后端直连约束。每完成一个编号实施步骤，完成相关检查与记录后立即创建一次本地 Git commit，完整 commit message 必须同时包含标题和非空正文并遵循 convention；反馈 commit hash 及与实际提交一致的完整 message（标题和正文）后再进入下一步。完成该阶段测试与人工验证，记录实际结果和阻塞，更新阶段交接记录。不要自动进入下一阶段，不要 push 或上线。
 
 执行子计划时必须遵守以上逐步骤提交要求；仅编辑规划文档、尚未实施子计划时，不视为已经完成实施步骤。

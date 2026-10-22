@@ -71,7 +71,7 @@
 
 各阶段的前置依赖、共享契约、进度及执行方式见 [子计划索引](react-migration-00-index.md)。按 01～05 依次实施，每次只完成一个阶段并填写实际验收记录。
 
-实施过程中，每完成子计划“实施步骤”中的一个编号步骤，就在相关检查和记录完成后立即创建一次本地 Git commit，再进入下一步。提交信息遵循 [commit-conventions.md](commit-conventions.md)，不得包含任何 `Co-authored-by` / 共同作者信息；只提交本步改动，不执行 push。具体流程见索引中的“逐步骤 Git 提交要求”。
+实施过程中，每完成子计划“实施步骤”中的一个编号步骤，就在相关检查和记录完成后立即创建一次本地 Git commit，再进入下一步。每次必须生成并提交包含标题和非空正文的完整 commit message，并向用户反馈 hash 及与实际提交一致的完整 message；不能只提供标题。提交信息遵循 [commit-conventions.md](commit-conventions.md)，不得包含任何 `Co-authored-by` / 共同作者信息；只提交本步改动，不执行 push。具体流程见索引中的“逐步骤 Git 提交要求”。
 
 1. **[基础层](react-migration-01-foundation.md)**：后端直连地址配置、哈希工具封装、请求层、接口适配、QueryClient、Zustand 登录态、路由守卫及应用外壳；提前交付最小真实登录与退出，为下一阶段互动验收提供条件；联调前核对后端 CORS 前置条件。
 2. **[浏览闭环](react-migration-02-browsing.md)**：首页、热榜、详情、播放器、点赞、关注和共享评论抽屉。

@@ -6,12 +6,17 @@
 
 ```text
 <emoji> <type>(<scope>): <description>
+
+<body>
 ```
 
 示例：
 
 ```text
 ✨ feat(logger): add structured logging
+
+Explain why structured logging is needed and how initialization changes.
+Describe the affected modules and the checks performed.
 ```
 
 ### 格式要求
@@ -21,7 +26,7 @@
 - `scope` 用于说明影响范围，例如 `logger`、`config`、`server` 或 `bootstrap`；没有合适范围时可以省略。
 - `description` 使用英文祈使句，首字母小写，不以句号结尾。
 - 标题建议不超过 72 个字符。
-- 标题与正文之间空一行。
+- 每次生成或创建 commit message 都必须同时包含标题和非空正文，不能只提供标题；标题与正文之间空一行。
 - 正文用于说明变更原因、主要内容和影响范围。
 - 每行正文建议不超过团队约定的字符数，常用值为 72 或 100。
 
@@ -61,7 +66,9 @@ Impact:
 BREAKING CHANGE: Describe the migration required by consumers.
 ```
 
-不需要说明某一部分时，可以删除对应段落。小型提交可以只包含标题；涉及多个模块或行为变化的提交应补充正文。
+正文建议按 Why / What / Impact 组织，说明原因、主要变更和影响，并如实记录相关检查结果或未验证项。简单提交可以使用简短段落或列表，但不得省略正文。仅在确有破坏性变更时填写 `BREAKING CHANGE`。
+
+向用户交付生成的 commit message 时，使用一个完整文本代码块提供标题、空行和正文，便于直接复制；不能以变更摘要或标题列表替代完整 message。实际创建提交时，Git 中保存的信息必须与交付的完整 message 一致。
 
 ## 编写建议
 
@@ -113,4 +120,5 @@ BREAKING CHANGE: rename `server.address` to `server.addr` in application.yaml.
 - [ ] 标题不超过 72 个字符。
 - [ ] 变更涉及破坏性修改时已添加 `BREAKING CHANGE:`。
 - [ ] 正文已说明必要的原因、实现和影响。
+- [ ] 生成结果和实际提交均包含标题及非空正文，交付时提供完整 message。
 - [ ] 已运行与本次变更相关的测试或检查。

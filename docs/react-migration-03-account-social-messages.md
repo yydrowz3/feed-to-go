@@ -2,7 +2,7 @@
 
 前置：[基础层](react-migration-01-foundation.md) 与 [视频浏览](react-migration-02-browsing.md) 已交付；共同约束见 [索引](react-migration-00-index.md)。下一阶段：[上传与发布](react-migration-04-upload-publish.md)。
 
-执行要求：下方 7 个编号实施步骤逐个完成、逐个本地 Git commit，先完成本步相关检查和记录再提交，不积攒到阶段末。提交信息遵循 [commit-conventions.md](commit-conventions.md)，不含 `Co-authored-by` 或共同作者声明，不执行 push；范围和核对流程遵循 [逐步骤提交要求](react-migration-00-index.md#逐步骤-git-提交要求)。
+执行要求：下方 7 个编号实施步骤逐个完成、逐个本地 Git commit，先完成本步相关检查和记录再提交，不积攒到阶段末。每次生成和提交的完整 commit message 必须包含标题及非空正文，提交后反馈 hash 和完整 message（标题和正文）。提交信息遵循 [commit-conventions.md](commit-conventions.md)，不含 `Co-authored-by` 或共同作者声明，不执行 push；范围和核对流程遵循 [逐步骤提交要求](react-migration-00-index.md#逐步骤-git-提交要求)。
 
 ## 目标与边界
 
