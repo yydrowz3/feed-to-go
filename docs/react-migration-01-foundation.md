@@ -162,5 +162,8 @@ pnpm dev
 - 步骤 3：实现可注入 fetch/会话访问器的 API 客户端、JSON/FormData、类型化 HTTP 错误、单次重放、同会话共享刷新、旧会话隔离和独立请求取消；组装入口创建客户端。
   - 检查：`pnpm test` 16/16 通过；`pnpm build` 通过；`pnpm lint` 无错误、原有 3 条模板警告。覆盖迟到 401、刷新未返回 refresh token、FormData boundary、退出/换号、改名竞态、取消与错误类型。
 - 浏览器直连与鉴权验证：待填写。
+- 步骤 3 commit：`cbd668b` — `✨ feat(web): add session-safe API client and shared token refresh`。
+- 步骤 4：建立 wire DTO、归一化与 account/feed/video/like/social/comment/message API 工厂；所有方法支持 signal。修正作者列表路径、following_id/followings 字段，保留头像简介、热榜数据库回退游标和各时间单位。
+  - 检查：`pnpm test` 20/20 通过；`pnpm build` 通过；`pnpm lint` 无错误、原有 3 条模板警告。接口契约逐项对照 Go router、entity 和 handler。
 - 后端/CORS 阻塞及未完成项：待填写。
 - 本阶段交付结论：未开始。

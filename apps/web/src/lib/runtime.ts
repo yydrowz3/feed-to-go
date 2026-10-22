@@ -2,6 +2,7 @@ import { QueryClient } from '@tanstack/react-query'
 import { createAuthStore } from '../stores/auth.ts'
 import { parseApiBase } from './config.ts'
 import { createApiClient } from '../api/client.ts'
+import { createBusinessApi } from '../api/index.ts'
 export function createRuntime(value: unknown) {
   const baseUrl = parseApiBase(value)
   const authStore = createAuthStore()
@@ -28,7 +29,7 @@ export function createRuntime(value: unknown) {
     invalidate()
   })
   return {
-    baseUrl, authStore, api, queryClient,
+    baseUrl, authStore, api, services: createBusinessApi(api), queryClient,
     setRouterInvalidation(callback: () => void) { invalidate = callback },
     registerSessionTask(cancel: () => void) { taskCancels.add(cancel); return () => { taskCancels.delete(cancel) } },
     dispose() { unsubscribe(); taskCancels.forEach(cancel => cancel()); taskCancels.clear() },
