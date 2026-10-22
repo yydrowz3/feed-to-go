@@ -9,17 +9,31 @@ import (
 	"feed-to-go/internal/services/social"
 	"feed-to-go/internal/services/video"
 	"feed-to-go/internal/worker"
-	"fmt"
+	"net"
+	"net/url"
+	"strconv"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 func NewDB(dbcfg config.DatabaseConfig) (*gorm.DB, error) {
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable",
-		dbcfg.Host, dbcfg.User, dbcfg.Password, dbcfg.DBName, dbcfg.Port)
+	dsn := url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(dbcfg.User, dbcfg.Password),
+		Host:   net.JoinHostPort(dbcfg.Host, strconv.Itoa(dbcfg.Port)),
+		Path:   "/" + dbcfg.DBName,
+	}
+	params := url.Values{}
+	if dbcfg.SSLMode != "" {
+		params.Set("sslmode", dbcfg.SSLMode)
+	}
+	if dbcfg.ChannelBinding != "" {
+		params.Set("channel_binding", dbcfg.ChannelBinding)
+	}
+	dsn.RawQuery = params.Encode()
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(dsn.String()), &gorm.Config{})
 	if err != nil {
 		return nil, err
 	}

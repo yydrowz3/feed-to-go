@@ -174,25 +174,33 @@ func declareCommentTopology(ch *amqp.Channel) error {
 }
 
 func main() {
-	// 加载 .env（本地开发）
-	if err := godotenv.Load(); err != nil {
-		logging.Sugar.Warnf(".env not found; continuing")
+	// 先加载 .env，让日志初始化能够读取 APP_ENV。
+	envErr := godotenv.Load()
+	if err := logging.Init(); err != nil {
+		panic(err)
 	}
-	// 加载配置
+	defer logging.Sync()
+
+	if envErr != nil {
+		logging.Sugar.Warnf("Failed to load .env; using existing environment variables: %v", envErr)
+	}
+
+	// 应用配置从环境变量读取，文件仅提供 observability 配置。
 	configPath := os.Getenv("CONFIG_PATH")
 	if configPath == "" {
 		configPath = "configs/config.yaml"
 	}
-	logging.Sugar.Infof("Loading config from %s", configPath)
-	cfg, usedDefault, err := config.LoadLocalDev(configPath)
+	logging.Sugar.Infof("Loading application config from environment and observability config from %s", configPath)
+	cfg, usedDefaultObservability, err := config.LoadLocalDev(configPath)
 	if err != nil {
 		logging.Sugar.Fatalf("Failed to load config: %v", err)
 	}
-	if usedDefault {
-		logging.Sugar.Warnf("Config File %s not found, using default local config", configPath)
+	if usedDefaultObservability {
+		logging.Sugar.Warnf("Config file %s not found; using default local observability config", configPath)
 	} else {
-		logging.Sugar.Infof("Config loaded from file: %s", configPath)
+		logging.Sugar.Infof("Observability config loaded from file: %s", configPath)
 	}
+	logging.Sugar.Infof("Application config loaded from environment (PORT defaults to 8095)")
 
 	// 连接数据库（带重试）
 	var db *gorm.DB

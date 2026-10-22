@@ -10,10 +10,10 @@ import (
 )
 
 type Config struct {
-	Server        ServerConfig        `yaml:"server"`
-	Database      DatabaseConfig      `yaml:"database"`
-	Redis         RedisConfig         `yaml:"redis"`
-	RabbitMQ      RabbitMQConfig      `yaml:"rabbitmq"`
+	Server        ServerConfig        `yaml:"-"`
+	Database      DatabaseConfig      `yaml:"-"`
+	Redis         RedisConfig         `yaml:"-"`
+	RabbitMQ      RabbitMQConfig      `yaml:"-"`
 	Observability ObservabilityConfig `yaml:"observability"`
 }
 
@@ -22,11 +22,13 @@ type ServerConfig struct {
 }
 
 type DatabaseConfig struct {
-	Host     string `yaml:"host"`
-	Port     int    `yaml:"port"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-	DBName   string `yaml:"dbname"`
+	Host           string `yaml:"host"`
+	Port           int    `yaml:"port"`
+	User           string `yaml:"user"`
+	Password       string `yaml:"password"`
+	DBName         string `yaml:"dbname"`
+	SSLMode        string `yaml:"sslmode"`
+	ChannelBinding string `yaml:"channel_binding"`
 }
 
 type RedisConfig struct {
@@ -72,61 +74,36 @@ func ApplyEnvOverrides(cfg *Config) {
 	if cfg == nil {
 		return
 	}
-	if v := os.Getenv("PORT"); v != "" {
-		if port, err := strconv.Atoi(v); err == nil {
-			cfg.Server.Port = port
-		}
+
+	// 除 observability 外，配置从环境变量读取；PORT 默认使用 8095。
+	cfg.Server = ServerConfig{Port: 8095}
+	if port, err := strconv.Atoi(os.Getenv("PORT")); err == nil {
+		cfg.Server.Port = port
 	}
-	if v := os.Getenv("POSTGRES_HOST"); v != "" {
-		cfg.Database.Host = v
+
+	cfg.Database = DatabaseConfig{
+		Host:           os.Getenv("DB_HOST"),
+		User:           os.Getenv("DB_USER"),
+		Password:       os.Getenv("DB_PASSWORD"),
+		DBName:         os.Getenv("DB_NAME"),
+		SSLMode:        os.Getenv("DB_SSLMODE"),
+		ChannelBinding: os.Getenv("DB_CHANNEL_BINDING"),
 	}
-	if v := os.Getenv("POSTGRES_PORT"); v != "" {
-		if port, err := strconv.Atoi(v); err == nil {
-			cfg.Database.Port = port
-		}
+	cfg.Database.Port, _ = strconv.Atoi(os.Getenv("DB_PORT"))
+
+	cfg.Redis = RedisConfig{
+		Host:     os.Getenv("REDIS_HOST"),
+		Password: os.Getenv("REDIS_PASSWORD"),
 	}
-	if v := os.Getenv("POSTGRES_USER"); v != "" {
-		cfg.Database.User = v
+	cfg.Redis.Port, _ = strconv.Atoi(os.Getenv("REDIS_PORT"))
+	cfg.Redis.DB, _ = strconv.Atoi(os.Getenv("REDIS_DB"))
+
+	cfg.RabbitMQ = RabbitMQConfig{
+		Host:     os.Getenv("AMQP_HOST"),
+		Username: os.Getenv("AMQP_USER"),
+		Password: os.Getenv("AMQP_PASSWORD"),
 	}
-	if v := os.Getenv("POSTGRES_ROOT_PASSWORD"); v != "" {
-		cfg.Database.Password = v
-	}
-	if v := os.Getenv("POSTGRES_PASSWORD"); v != "" {
-		cfg.Database.Password = v
-	}
-	if v := os.Getenv("POSTGRES_DATABASE"); v != "" {
-		cfg.Database.DBName = v
-	}
-	if v := os.Getenv("REDIS_HOST"); v != "" {
-		cfg.Redis.Host = v
-	}
-	if v := os.Getenv("REDIS_PORT"); v != "" {
-		if port, err := strconv.Atoi(v); err == nil {
-			cfg.Redis.Port = port
-		}
-	}
-	if v := os.Getenv("REDIS_PASSWORD"); v != "" {
-		cfg.Redis.Password = v
-	}
-	if v := os.Getenv("REDIS_DB"); v != "" {
-		if db, err := strconv.Atoi(v); err == nil {
-			cfg.Redis.DB = db
-		}
-	}
-	if v := os.Getenv("RABBITMQ_HOST"); v != "" {
-		cfg.RabbitMQ.Host = v
-	}
-	if v := os.Getenv("RABBITMQ_PORT"); v != "" {
-		if port, err := strconv.Atoi(v); err == nil {
-			cfg.RabbitMQ.Port = port
-		}
-	}
-	if v := os.Getenv("RABBITMQ_USER"); v != "" {
-		cfg.RabbitMQ.Username = v
-	}
-	if v := os.Getenv("RABBITMQ_PASS"); v != "" {
-		cfg.RabbitMQ.Password = v
-	}
+	cfg.RabbitMQ.Port, _ = strconv.Atoi(os.Getenv("AMQP_PORT"))
 }
 
 // bool用来表示是否使用了默认配置，true表示使用了默认配置
@@ -144,28 +121,6 @@ func LoadLocalDev(filename string) (Config, bool, error) {
 
 func DefaultLocalConfig() Config {
 	cfg := Config{
-		Server: ServerConfig{
-			Port: 8095,
-		},
-		Database: DatabaseConfig{
-			Host:     "localhost",
-			Port:     5432,
-			User:     "root",
-			Password: "123456",
-			DBName:   "feed",
-		},
-		Redis: RedisConfig{
-			Host:     "localhost",
-			Port:     6379,
-			Password: "123456",
-			DB:       0,
-		},
-		RabbitMQ: RabbitMQConfig{
-			Host:     "localhost",
-			Port:     5672,
-			Username: "admin",
-			Password: "password123",
-		},
 		Observability: ObservabilityConfig{
 			Pprof: PprofConfig{
 				Enabled:    true,
