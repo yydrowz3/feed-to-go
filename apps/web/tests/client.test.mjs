@@ -41,6 +41,32 @@ test('replayed 401 stops after one replay and clears session', async () => {
   await assert.rejects(env.client.postJson('/private', {}), error => error instanceof ApiError && error.status === 401)
   assert.equal(calls, 3); assert.equal(env.state().accessToken, '')
 })
+
+test('401 without refresh credentials clears the session without a refresh request', async () => {
+  let calls = 0
+  const env = setup(async url => {
+    calls++
+    assert.equal(url.endsWith('/refresh'), false)
+    return response({ error: 'expired' }, 401)
+  })
+  env.set({ refreshToken: '' })
+  await assert.rejects(env.client.postJson('/private', {}), error => error instanceof ApiError && error.status === 401)
+  assert.equal(calls, 1)
+  assert.equal(env.state().accessToken, '')
+  assert.equal(env.state().refreshToken, '')
+})
+
+test('malformed successful refresh clears credentials and never replays the request', async () => {
+  let calls = 0
+  const env = setup(async url => {
+    calls++
+    return url.endsWith('/refresh') ? response({ token: 'invalid-jwt' }) : response({}, 401)
+  })
+  await assert.rejects(env.client.postJson('/private', {}), error => error instanceof ApiError && error.status === 401)
+  assert.equal(calls, 2)
+  assert.equal(env.state().accessToken, '')
+  assert.equal(env.state().refreshToken, '')
+})
 test('none skips auth and refresh; required without token fails before fetch; network errors keep their type', async () => {
   let calls = 0
   const env = setup(async (_, init) => { calls++; assert.equal(init.headers.Authorization, undefined); return response({}, 401) })
