@@ -2,7 +2,7 @@ package video
 
 type Tag struct {
 	ID   uint   `gorm:"primaryKey" json:"id"`
-	Name string `gorm:"uniqueIndex;type;varchar(100);not null" json:"name"`
+	Name string `gorm:"uniqueIndex;type:varchar(100);not null" json:"name"`
 }
 
 type VideoTag struct {

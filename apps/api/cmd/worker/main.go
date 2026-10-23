@@ -15,7 +15,6 @@ import (
 	"feed-to-go/pkg/persistence"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -230,12 +229,14 @@ func main() {
 	}
 
 	// 连接 RabbitMQ（带重试）
-	url := "amqp://" + cfg.RabbitMQ.Username + ":" + cfg.RabbitMQ.Password + "@" + cfg.RabbitMQ.Host + ":" + strconv.Itoa(cfg.RabbitMQ.Port) + "/"
 	var conn *amqp.Connection
 	connectWithRetry("RabbitMQ", 10, func() error {
-		var err error
-		conn, err = amqp.Dial(url)
-		return err
+		client, err := mq.NewRabbitMQ(&cfg.RabbitMQ)
+		if err != nil {
+			return err
+		}
+		conn = client.Conn
+		return nil
 	})
 	defer conn.Close()
 

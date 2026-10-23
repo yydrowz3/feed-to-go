@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 var (
@@ -28,8 +29,13 @@ func Sync() error {
 
 func New() (*zap.Logger, error) {
 	env := os.Getenv("APP_ENV")
+	cfg := zap.NewDevelopmentConfig()
 	if env == "production" || env == "prod" {
 		return zap.NewProduction()
+	} else {
+		cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	}
-	return zap.NewDevelopment()
+	cfg.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout("2006-01-02 15:04:05.000")
+
+	return cfg.Build()
 }

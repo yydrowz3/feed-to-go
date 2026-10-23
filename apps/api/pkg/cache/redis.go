@@ -2,9 +2,11 @@ package cache
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"feed-to-go/internal/config"
 	"fmt"
+	"net"
 	"strconv"
 	"time"
 
@@ -25,11 +27,15 @@ func NewClient(rdb *redis.Client, keyPrefix string) *Client {
 }
 
 func NewFromCfg(cfg *config.RedisConfig) (*Client, error) {
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     cfg.Host + ":" + strconv.Itoa(cfg.Port),
+	opts := &redis.Options{
+		Addr:     net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port)),
 		Password: cfg.Password,
 		DB:       cfg.DB,
-	})
+	}
+	if cfg.TLS {
+		opts.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS12}
+	}
+	rdb := redis.NewClient(opts)
 	return &Client{rdb, defaultKeyPrefix}, nil
 }
 

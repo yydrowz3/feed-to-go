@@ -38,13 +38,17 @@ type RedisConfig struct {
 	Port     int    `yaml:"port"`
 	Password string `yaml:"password"`
 	DB       int    `yaml:"db"`
+	TLS      bool   `yaml:"tls"`
 }
 
 type RabbitMQConfig struct {
+	URL      string `yaml:"-"`
 	Host     string `yaml:"host"`
 	Port     int    `yaml:"port"`
 	Username string `yaml:"username"`
 	Password string `yaml:"password"`
+	VHost    string `yaml:"vhost"`
+	TLS      bool   `yaml:"tls"`
 }
 
 type ObservabilityConfig struct {
@@ -105,13 +109,17 @@ func ApplyEnvOverrides(cfg *Config) {
 	}
 	cfg.Redis.Port, _ = strconv.Atoi(os.Getenv("REDIS_PORT"))
 	cfg.Redis.DB, _ = strconv.Atoi(os.Getenv("REDIS_DB"))
+	cfg.Redis.TLS, _ = strconv.ParseBool(os.Getenv("REDIS_TLS"))
 
 	cfg.RabbitMQ = RabbitMQConfig{
+		URL:      strings.TrimSpace(os.Getenv("AMQP_URL")),
 		Host:     os.Getenv("AMQP_HOST"),
 		Username: os.Getenv("AMQP_USER"),
 		Password: os.Getenv("AMQP_PASSWORD"),
+		VHost:    os.Getenv("AMQP_VHOST"),
 	}
 	cfg.RabbitMQ.Port, _ = strconv.Atoi(os.Getenv("AMQP_PORT"))
+	cfg.RabbitMQ.TLS, _ = strconv.ParseBool(os.Getenv("AMQP_TLS"))
 }
 
 // bool用来表示是否使用了默认配置，true表示使用了默认配置

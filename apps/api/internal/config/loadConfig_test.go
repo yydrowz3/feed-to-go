@@ -6,6 +6,28 @@ import (
 	"testing"
 )
 
+func TestRedisTLSFromEnvironment(t *testing.T) {
+	for _, value := range []string{"", "false", "true"} {
+		t.Run("REDIS_TLS="+value, func(t *testing.T) {
+			t.Setenv("REDIS_TLS", value)
+			cfg := DefaultLocalConfig()
+			if cfg.Redis.TLS != (value == "true") {
+				t.Fatalf("Redis.TLS = %v for REDIS_TLS=%q", cfg.Redis.TLS, value)
+			}
+		})
+	}
+}
+
+func TestRabbitMQFromEnvironment(t *testing.T) {
+	t.Setenv("AMQP_URL", "amqps://user:test@localhost/tenant")
+	t.Setenv("AMQP_TLS", "true")
+	t.Setenv("AMQP_VHOST", "tenant")
+	cfg := DefaultLocalConfig()
+	if cfg.RabbitMQ.URL != "amqps://user:test@localhost/tenant" || !cfg.RabbitMQ.TLS || cfg.RabbitMQ.VHost != "tenant" {
+		t.Fatal("RabbitMQ URI, TLS, or vhost environment configuration was lost")
+	}
+}
+
 func TestWebURLFromEnvironment(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
