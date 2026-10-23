@@ -136,6 +136,8 @@ pnpm preview --host 127.0.0.1
   - 生产 WASM：临时本地测试页将现有 `src/lib/hash.ts` 去类型编译后加载实际 dist 的 `index.esm-Br2JuRJr.js`，真实浏览器运行 computeFileMd5 / computeBlobMd5。3 字节 abc、2 MiB+1 和 5 MiB+1 字节 a 的两种 MD5 均匹配 Node crypto，分块读取间 AbortController 取消通过，控制台无错误。该页不调用业务接口、不伪造发布成功，不进入 src/dist 或提交，验证后停止并清除。
   - 资源释放静态复核：播放器卸载 pause；滚动的 listener/ResizeObserver/RAF 有清理；快捷键移除 listener；弹窗关闭并恢复焦点；预览 URL revoke；上传取消/会话变化终止任务及重试等待。既有单元测试覆盖取消边界。没有有效视频/账号，不能将静态复核记为实际播放、资源增长、焦点或上传联调通过。
   - 截图保存在本次任务可视化目录：`stage05-desktop.jpg`（1440×900 热榜空态）、`stage05-mobile.jpg`（390×844 注册）。真实双账号互动、消息、媒体播放、上传重试/续传/401/封面失败及发布结果恢复均待验；离线/慢网、429/500 和交互页面长文本未做浏览器回归。
+- 步骤 5：最终从 `apps/web` 执行 `pnpm test` **80/80 通过**（0 fail/skip）、`pnpm build` 通过（TypeScript + Vite 8.3.5，2304 modules，主 JS 452.20 kB / gzip 134.27 kB）、`pnpm lint` **0 错误/0 警告**；`git diff --check` 通过。生成树仅有目标路由；src/dist 清理标识搜索无命中，锁文件不变，tests 无个人 .env 读取或真实网络依赖。本步无代码变更，版本保持 **0.1.9**。
+  - 实际启动命令 `pnpm preview --host 127.0.0.1 --port 5173 --strictPort`：生产 `/account?redirect=%2Fvideo` 深链接及刷新均显示登录并保留目标；公开 `/video/1` 显示后端 record not found 与重试。浏览器 WASM 产物 hash 与步骤 4 相同。使用 5173 是为匹配真实后端已允许的 Origin，非代理绕过。
 - 各编号步骤的审计/回归结果及 commit 清单：待填写；提交 hash 在创建后反馈，不为回填自身 hash 创建额外提交。
 - 测试数量、build 和 lint 结果：待填写。
 - 浏览器与真实后端验收结果：待填写。
