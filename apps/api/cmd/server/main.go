@@ -99,7 +99,7 @@ func main() {
 	}
 
 	// Router
-	r := api.SetRouter(sqlDB, cache, rmq, cfg.Server.WebURL)
+	r := api.SetRouter(sqlDB, cache, rmq, cfg.Server.WebURL, cfg.Server.AppEnv)
 	logging.Sugar.Infof("Server is running on port %d", cfg.Server.Port)
 	if err := r.Run(":" + strconv.Itoa(cfg.Server.Port)); err != nil {
 		logging.Sugar.Fatalf("Failed to run server: %v", err)

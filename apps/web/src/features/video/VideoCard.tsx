@@ -1,16 +1,21 @@
 import { Link } from "@tanstack/react-router";
-import type { FeedVideoItem } from "../../api/types";
+import type { FeedVideoItem, Video } from "../../api/types";
 import { useRuntime } from "../../lib/app-context";
 import { mediaUrl } from "../../lib/media-url";
 import { ShareButton } from "./ShareButton";
 import { LikeButton } from "./LikeButton";
-export function VideoCard({ item }: { item: FeedVideoItem }) {
+import { useLikedVideo } from "./queries";
+export function VideoCard({ item }: { item: FeedVideoItem | Video }) {
   const { baseUrl } = useRuntime();
+  const isFeed = "author" in item;
+  const liked = useLikedVideo(item.id, !isFeed);
+  const author = isFeed ? item.author : { id: item.author_id, username: item.username };
+  const date = new Date(isFeed ? item.create_time * 1000 : item.create_time);
   return (
     <article className="card min-w-0 flex-1 bg-base-200 sm:card-side">
       <Link to="/video/$id" params={{ id: String(item.id) }} className="block shrink-0 sm:w-48">
         <img
-          src={mediaUrl(item.cover_url, baseUrl)}
+          src={mediaUrl(item.cover_url, baseUrl) || undefined}
           alt={item.title}
           loading="lazy"
           className="aspect-video w-full object-cover sm:h-full"
@@ -20,19 +25,33 @@ export function VideoCard({ item }: { item: FeedVideoItem }) {
         <Link to="/video/$id" params={{ id: String(item.id) }} className="card-title break-words">
           {item.title}
         </Link>
-        <Link to="/u/$id" params={{ id: String(item.author.id) }} className="link link-hover">
-          @{item.author.username}
+        <Link to="/u/$id" params={{ id: String(author.id) }} className="link link-hover">
+          @{author.username}
         </Link>
         <time
-          dateTime={new Date(item.create_time * 1000).toISOString()}
+          dateTime={Number.isNaN(date.getTime()) ? undefined : date.toISOString()}
           className="text-xs text-base-content/60"
         >
-          {new Date(item.create_time * 1000).toLocaleString()}
+          {Number.isNaN(date.getTime()) ? "日期未知" : date.toLocaleString()}
         </time>
         <div className="card-actions items-center">
-          <LikeButton videoId={item.id} liked={item.is_liked} count={item.likes_count} />
+          <LikeButton
+            videoId={item.id}
+            liked={isFeed ? item.is_liked : (liked.data?.is_liked ?? false)}
+            count={item.likes_count}
+            ready={isFeed || !!liked.data}
+          />
           <ShareButton videoId={item.id} />
         </div>
+        {!isFeed && liked.isError && (
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => void liked.refetch()}
+          >
+            重试点赞状态
+          </button>
+        )}
       </div>
     </article>
   );

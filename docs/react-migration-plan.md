@@ -11,6 +11,7 @@
 ## 2. 架构与技术约定
 
 - **目录组织**：`routes` 负责路由配置；`features` 按账号、视频、社交、私信组织页面和业务逻辑；`components` 放共享组件；`api` 放请求和接口类型；`stores` 放 Zustand 状态；`lib` 放通用工具。
+- **应用版本**：遵守 [前端实施约定](../apps/web/AGENTS.md)。每次有前端实际改动的实施单元更新 `package.json` 应用版本；本计划按每个编号步骤更新一次，默认 `pnpm version:bump`，与实现同一步提交并记录版本前后值。普通测试/构建、无前端改动的纯文档或纯验证步骤不升版，不追溯历史步骤。
 - **路由**：沿用 TanStack Router 文件路由和自动代码拆分，路由树由插件生成。受保护页面使用 `beforeLoad` 检查登录态；登录后按 `redirect` 返回站内原页面，无有效目标则留在账号页。[官方鉴权方案](https://tanstack.com/router/latest/docs/framework/react/guide/authenticated-routes)
 - **状态**：Zustand 管理登录态及跨组件客户端状态；TanStack Query 管理视频、评论、关注关系和私信；组件局部状态不放入全局 Store。同一份服务端数据不在 Zustand 重复存储。
 - **表单**：登录、注册、改密码、改名、视频发布、评论、私信和搜索统一使用 TanStack Form；使用现有 Zod 校验，统一处理字段错误、提交状态及重复提交。[表单校验文档](https://tanstack.com/form/latest/docs/framework/react/guides/validation)

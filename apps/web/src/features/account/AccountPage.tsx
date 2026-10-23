@@ -6,8 +6,7 @@ import { toast } from "sonner";
 import { useAuth, useRuntime } from "../../lib/app-context";
 import { isCancellation } from "../../api/client";
 import { FormField } from "../../components/FormField";
-import { UserAvatar } from "../../components/UserAvatar";
-import { AccountIdentity } from "./AccountIdentity";
+import { MyAccountPage } from "./MyAccountPage";
 import { loginSchema, loginSession } from "./session-actions";
 
 export function AccountPage() {
@@ -39,18 +38,7 @@ export function AccountPage() {
       }
     },
   });
-  if (auth.accessToken)
-    return (
-      <section className="card mx-auto max-w-xl bg-base-200 shadow-lg">
-        <div className="card-body gap-6">
-          <UserAvatar username={auth.username} size="lg" />
-          <AccountIdentity username={auth.username} accountId={auth.accountId} />
-          <Link to="/settings" className="btn btn-primary self-start">
-            账号设置
-          </Link>
-        </div>
-      </section>
-    );
+  if (auth.accessToken) return <MyAccountPage key={auth.sessionId} />;
   return (
     <section className="card mx-auto max-w-md bg-base-200 shadow-lg">
       <div className="card-body gap-6">
@@ -126,7 +114,7 @@ export function AccountPage() {
           </form.Subscribe>
         </form>
         <div className="flex flex-wrap justify-between gap-3 text-sm">
-          <Link to="/account/register" className="link link-primary">
+          <Link to="/account/register" search={{ redirect }} className="link link-primary">
             注册账号
           </Link>
           <Link to="/account/change-password" className="link link-hover">

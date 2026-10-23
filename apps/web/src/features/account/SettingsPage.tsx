@@ -1,19 +1,27 @@
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth, useRuntime } from "../../lib/app-context";
 import { isCancellation } from "../../api/client";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { AccountIdentity } from "./AccountIdentity";
-import { logoutSession } from "./session-actions";
+import { logoutSession, renameAccount } from "./session-actions";
+import { AccountForm } from "./AccountForm";
+import { NativeDialog } from "../../components/NativeDialog";
+import { useActionScope } from "./use-action-scope";
 
 export function SettingsPage() {
+  const auth = useAuth();
+  return <SettingsContent key={auth.sessionId} />;
+}
+function SettingsContent() {
   const auth = useAuth();
   const runtime = useRuntime();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
   const pending = useRef(false);
   const lifetime = useRef<AbortController | null>(null);
   useEffect(() => {
@@ -44,6 +52,18 @@ export function SettingsPage() {
       <div className="card-body gap-6">
         <h1 className="text-2xl font-bold">账号设置</h1>
         <AccountIdentity username={auth.username} accountId={auth.accountId} />
+        <p className="text-base-content/60">
+          管理用户名和登录状态。修改密码后需要重新登录当前账号。
+        </p>
+        <button type="button" className="btn self-start" onClick={() => setRenameOpen(true)}>
+          修改用户名
+        </button>
+        <Link to="/account/change-password" className="btn self-start">
+          修改密码
+        </Link>
+        <NativeDialog open={renameOpen} title="修改用户名" onClose={() => setRenameOpen(false)}>
+          {renameOpen && <RenameForm close={() => setRenameOpen(false)} />}
+        </NativeDialog>
         <button
           type="button"
           className="btn btn-error self-start"
@@ -67,5 +87,23 @@ export function SettingsPage() {
         />
       </div>
     </section>
+  );
+}
+function RenameForm({ close }: { close: () => void }) {
+  const runtime = useRuntime();
+  const auth = useAuth();
+  const getSignal = useActionScope();
+  return (
+    <AccountForm
+      fields={[
+        { name: "username", label: "新用户名", initial: auth.username, autoComplete: "username" },
+      ]}
+      submitLabel="保存用户名"
+      onSubmit={async (values) => {
+        await renameAccount(runtime, values.username, getSignal());
+        toast.success("用户名已更新");
+        close();
+      }}
+    />
   );
 }

@@ -15,12 +15,14 @@ export const queryKeys = {
     ["followings", sessionId, accountId, targetId] as const,
   comments: ({ sessionId, accountId }: Viewer, videoId: number) =>
     ["comments", sessionId, accountId, videoId] as const,
-  likedVideos: ({ sessionId, accountId }: Viewer) => ["likedVideos", sessionId, accountId] as const,
+  likedVideos: ({ sessionId, accountId }: Viewer) => ["my-liked", sessionId, accountId] as const,
   authorVideos: ({ sessionId, accountId }: Viewer, authorId: number) =>
-    ["authorVideos", sessionId, accountId, authorId] as const,
+    ["works", sessionId, accountId, authorId] as const,
   profile: ({ sessionId, accountId }: Viewer, targetId: number) =>
-    ["profile", sessionId, accountId, targetId] as const,
+    ["account", sessionId, accountId, targetId] as const,
   socialCounts: ({ sessionId, accountId }: Viewer, targetId: number) =>
     ["socialCounts", sessionId, accountId, targetId] as const,
   contacts: ({ sessionId, accountId }: Viewer) => ["contacts", sessionId, accountId] as const,
+  messages: ({ sessionId, accountId }: Viewer, peerId: number) =>
+    ["messages", sessionId, accountId, peerId] as const,
 };

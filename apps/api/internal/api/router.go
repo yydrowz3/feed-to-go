@@ -22,9 +22,9 @@ import (
 	"gorm.io/gorm"
 )
 
-func SetRouter(db *gorm.DB, cache *cache.Client, rmq *mq.RabbitMQ, webURL string) *gin.Engine {
+func SetRouter(db *gorm.DB, cache *cache.Client, rmq *mq.RabbitMQ, webURL, appEnv string) *gin.Engine {
 	r := gin.Default()
-	r.Use(corsMiddleware(webURL))
+	r.Use(corsMiddleware(webURL, appEnv))
 	if err := r.SetTrustedProxies(nil); err != nil {
 		logging.Sugar.Fatalf("Failed to set trusted proxies: %v", err)
 	}

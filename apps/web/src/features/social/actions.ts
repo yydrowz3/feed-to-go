@@ -1,5 +1,9 @@
 import type { AppRuntime } from "../../lib/runtime.ts";
-import type { Account, GetAllFollowingsResponse } from "../../api/types.ts";
+import type {
+  Account,
+  GetAllFollowingsResponse,
+  GetAllFollowersResponse,
+} from "../../api/types.ts";
 import { createActionGate } from "../../lib/action-gate.ts";
 import { queryKeys } from "../../lib/query-keys.ts";
 import { inViewer, patchLikeCache } from "../video/cache.ts";
@@ -66,10 +70,23 @@ export function followAuthor(runtime: AppRuntime, author: Account, wasFollowing:
           };
         },
       );
+      runtime.queryClient.setQueryData<GetAllFollowersResponse>(
+        queryKeys.followers(viewer, author.id),
+        (old) => {
+          if (!old) return old;
+          const followers = old.followers.filter((account) => account.id !== viewer.accountId);
+          if (!wasFollowing) followers.push({ id: viewer.accountId, username: viewer.username });
+          return {
+            ...old,
+            followers,
+            follower_count: Math.max(0, old.follower_count + (wasFollowing ? -1 : 1)),
+          };
+        },
+      );
       void runtime.queryClient.invalidateQueries({
         predicate: (query) =>
           inViewer(query.queryKey, viewer) &&
-          ((["followings", "followers", "profile", "socialCounts"].includes(
+          ((["followings", "followers", "account", "socialCounts"].includes(
             String(query.queryKey[0]),
           ) &&
             [viewer.accountId, author.id].includes(Number(query.queryKey[3]))) ||

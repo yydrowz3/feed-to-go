@@ -15,7 +15,7 @@ import (
 
 func TestCORSPreflightStopsBeforeAuthentication(t *testing.T) {
 	r := gin.New()
-	r.Use(corsMiddleware("http://localhost:5173"))
+	r.Use(corsMiddleware("http://localhost:5173", "prod"))
 	called := false
 	r.Use(func(c *gin.Context) {
 		called = true
@@ -54,7 +54,7 @@ func TestCORSErrorResponsesKeepOriginHeader(t *testing.T) {
 	for _, status := range []int{401, 403, 404, 429, 500} {
 		t.Run(http.StatusText(status), func(t *testing.T) {
 			r := gin.New()
-			r.Use(corsMiddleware("http://localhost:5173"))
+			r.Use(corsMiddleware("http://localhost:5173", "prod"))
 			if status != http.StatusNotFound {
 				r.POST("/test", func(c *gin.Context) {
 					c.AbortWithStatusJSON(status, gin.H{"error": "request failed"})
@@ -73,10 +73,11 @@ func TestCORSErrorResponsesKeepOriginHeader(t *testing.T) {
 }
 
 func TestCORSOriginMatchingUsesConfiguredWebURL(t *testing.T) {
+	t.Setenv("APP_ENV", "prod")
 	t.Setenv("WEB_URL", "https://frontend.example.com")
 	cfg := config.DefaultLocalConfig()
 	r := gin.New()
-	r.Use(corsMiddleware(cfg.Server.WebURL))
+	r.Use(corsMiddleware(cfg.Server.WebURL, cfg.Server.AppEnv))
 	called := false
 	r.GET("/healthz", func(c *gin.Context) { called = true; c.Status(http.StatusOK) })
 	for _, origin := range []string{
@@ -104,13 +105,74 @@ func TestCORSOriginMatchingUsesConfiguredWebURL(t *testing.T) {
 	}
 }
 
+func TestCORSAppEnvironmentPolicy(t *testing.T) {
+	for _, tc := range []struct {
+		env      string
+		allowAll bool
+	}{
+		{"dev", true}, {" dev ", true}, {"", false}, {"prod", false},
+		{"production", false}, {"staging", false}, {"development", false}, {"DEV", false},
+	} {
+		t.Run("APP_ENV="+tc.env, func(t *testing.T) {
+			t.Setenv("APP_ENV", tc.env)
+			t.Setenv("WEB_URL", "https://frontend.example.com")
+			cfg := config.DefaultLocalConfig()
+			r := gin.New()
+			r.Use(corsMiddleware(cfg.Server.WebURL, cfg.Server.AppEnv))
+			called := false
+			r.Use(func(c *gin.Context) {
+				called = true
+				c.AbortWithStatus(http.StatusUnauthorized)
+			})
+			for _, origin := range []string{"https://frontend.example.com", "http://localhost:5173", "http://127.0.0.1:4173", "https://other.example.com", "https://frontend.example.com.evil.test", "null", ""} {
+				for _, method := range []string{http.MethodGet, http.MethodHead, http.MethodPost, http.MethodOptions} {
+					called = false
+					req := httptest.NewRequest(method, "/protected", nil)
+					if origin != "" {
+						req.Header.Set("Origin", origin)
+					}
+					if method == http.MethodOptions {
+						req.Header.Set("Access-Control-Request-Method", http.MethodPost)
+						req.Header.Set("Access-Control-Request-Headers", "authorization,content-type,range")
+					}
+					rec := httptest.NewRecorder()
+					r.ServeHTTP(rec, req)
+					wantStatus, wantOrigin, wantCalled := http.StatusUnauthorized, "", true
+					if origin != "" {
+						if !tc.allowAll && origin != "https://frontend.example.com" {
+							wantStatus, wantCalled = http.StatusForbidden, false
+						} else {
+							wantOrigin = origin
+							if tc.allowAll {
+								wantOrigin = "*"
+							}
+							if method == http.MethodOptions {
+								wantStatus, wantCalled = http.StatusNoContent, false
+								if rec.Header().Get("Access-Control-Allow-Headers") != "Authorization, Content-Type, Range" {
+									t.Errorf("preflight lost supported headers: %q", rec.Header())
+								}
+							}
+						}
+					}
+					if rec.Code != wantStatus || rec.Header().Get("Access-Control-Allow-Origin") != wantOrigin || called != wantCalled {
+						t.Errorf("%s origin=%q: status=%d, CORS=%q, downstream=%v; want %d, %q, %v", method, origin, rec.Code, rec.Header().Get("Access-Control-Allow-Origin"), called, wantStatus, wantOrigin, wantCalled)
+					}
+					if rec.Header().Get("Access-Control-Allow-Credentials") != "" {
+						t.Error("unexpected cross-origin cookie credentials")
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestCORSStaticMediaAndRangeRequests(t *testing.T) {
 	directory := t.TempDir()
 	if err := os.WriteFile(filepath.Join(directory, "video.mp4"), []byte("0123456789"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	r := gin.New()
-	r.Use(corsMiddleware("http://localhost:5173"))
+	r.Use(corsMiddleware("http://localhost:5173", "prod"))
 	r.Static("/static", directory)
 	for _, method := range []string{http.MethodGet, http.MethodHead} {
 		req := httptest.NewRequest(method, "/static/video.mp4", nil)

@@ -21,6 +21,7 @@ type Config struct {
 type ServerConfig struct {
 	Port   int    `yaml:"port"`
 	WebURL string `yaml:"-"`
+	AppEnv string `yaml:"-"`
 }
 
 type DatabaseConfig struct {
@@ -85,6 +86,7 @@ func ApplyEnvOverrides(cfg *Config) {
 	cfg.Server = ServerConfig{
 		Port:   8095,
 		WebURL: strings.TrimSpace(os.Getenv("WEB_URL")),
+		AppEnv: strings.TrimSpace(os.Getenv("APP_ENV")),
 	}
 	if cfg.Server.WebURL == "" {
 		cfg.Server.WebURL = "http://localhost:5173"

@@ -6,11 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func corsMiddleware(origins ...string) gin.HandlerFunc {
-	allowed := make(map[string]bool, len(origins))
-	for _, origin := range origins {
-		allowed[origin] = true
-	}
+func corsMiddleware(webURL, appEnv string) gin.HandlerFunc {
+	allowAllOrigins := appEnv == "dev"
 
 	return func(c *gin.Context) {
 		c.Writer.Header().Add("Vary", "Origin")
@@ -20,12 +17,16 @@ func corsMiddleware(origins ...string) gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		if !allowed[origin] {
+		if !allowAllOrigins && origin != webURL {
 			c.AbortWithStatus(http.StatusForbidden)
 			return
 		}
 
-		c.Header("Access-Control-Allow-Origin", origin)
+		if allowAllOrigins {
+			c.Header("Access-Control-Allow-Origin", "*")
+		} else {
+			c.Header("Access-Control-Allow-Origin", origin)
+		}
 		if c.Request.Method == http.MethodOptions {
 			c.Header("Access-Control-Allow-Methods", "GET, HEAD, POST, OPTIONS")
 			c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type, Range")

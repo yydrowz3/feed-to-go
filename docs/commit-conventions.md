@@ -122,3 +122,4 @@ BREAKING CHANGE: rename `server.address` to `server.addr` in application.yaml.
 - [ ] 正文已说明必要的原因、实现和影响。
 - [ ] 生成结果和实际提交均包含标题及非空正文，交付时提供完整 message。
 - [ ] 已运行与本次变更相关的测试或检查。
+- [ ] 有前端实际改动的实施单元已按 [前端版本规则](../apps/web/AGENTS.md) 更新一次应用版本，版本文件与实现同一步交付，并记录版本前后值；不为反复验证重复升版。

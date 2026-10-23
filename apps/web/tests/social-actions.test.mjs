@@ -82,6 +82,36 @@ test("failed actions retain caches, release the gate and unlike counts stay nonn
   assert.equal(runtime.queryClient.getQueryData(queryKeys.video(viewer, 8)).likes_count, 0);
   runtime.dispose();
 });
+test("unlike removes cached liked videos and new likes only insert complete Video data", async () => {
+  const { runtime, viewer } = fixture();
+  const key = queryKeys.likedVideos(viewer);
+  runtime.queryClient.setQueryData(key, []);
+  await likeVideo(runtime, 8, false);
+  assert.deepEqual(runtime.queryClient.getQueryData(key), []);
+  const complete = {
+    id: 8,
+    author_id: 1,
+    username: "测试",
+    title: "video",
+    play_url: "/static/a.mp4",
+    cover_url: "",
+    create_time: "2026-10-23T00:00:00Z",
+    likes_count: 1,
+  };
+  runtime.queryClient.setQueryData(queryKeys.video(viewer, 8), complete);
+  runtime.queryClient.setQueryData(queryKeys.authorVideos(viewer, 1), [complete]);
+  await likeVideo(runtime, 8, false);
+  assert.equal(runtime.queryClient.getQueryData(key)[0].create_time, complete.create_time);
+  assert.equal(runtime.queryClient.getQueryData(key)[0].likes_count, 2);
+  assert.equal(runtime.queryClient.getQueryState(key).isInvalidated, true);
+  await likeVideo(runtime, 8, true);
+  assert.deepEqual(runtime.queryClient.getQueryData(key), []);
+  assert.equal(
+    runtime.queryClient.getQueryData(queryKeys.authorVideos(viewer, 1))[0].likes_count,
+    1,
+  );
+  runtime.dispose();
+});
 test("account switches abort late actions and prevent old cache writes", async () => {
   const gate = deferred();
   let signal;
@@ -110,6 +140,10 @@ test("follow actions share a gate, patch followings and invalidate relevant soci
   });
   const own = queryKeys.followings(viewer, 1);
   runtime.queryClient.setQueryData(own, { followings: [], followings_count: 0 });
+  runtime.queryClient.setQueryData(queryKeys.followers(viewer, 2), {
+    followers: [],
+    follower_count: 7,
+  });
   for (const key of [
     queryKeys.profile(viewer, 2),
     queryKeys.socialCounts(viewer, 1),
@@ -124,6 +158,10 @@ test("follow actions share a gate, patch followings and invalidate relevant soci
   assert.deepEqual(runtime.queryClient.getQueryData(own), {
     followings: [{ id: 2, username: "作者" }],
     followings_count: 1,
+  });
+  assert.deepEqual(runtime.queryClient.getQueryData(queryKeys.followers(viewer, 2)), {
+    followers: [{ id: 1, username: "测试" }],
+    follower_count: 8,
   });
   for (const key of [
     own,

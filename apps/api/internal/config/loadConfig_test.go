@@ -59,7 +59,8 @@ func TestUnsetWebURLUsesLocalhost(t *testing.T) {
 	}
 }
 
-func TestLoadLocalDevKeepsWebURLWithAndWithoutConfigFile(t *testing.T) {
+func TestLoadLocalDevKeepsServerEnvironmentWithAndWithoutConfigFile(t *testing.T) {
+	t.Setenv("APP_ENV", " dev ")
 	t.Setenv("WEB_URL", "https://frontend.example.com")
 	filename := filepath.Join(t.TempDir(), "config.yaml")
 	for _, exists := range []bool{false, true} {
@@ -77,6 +78,9 @@ func TestLoadLocalDevKeepsWebURLWithAndWithoutConfigFile(t *testing.T) {
 		}
 		if cfg.Server.WebURL != "https://frontend.example.com" {
 			t.Fatalf("configured WebURL was lost: %q", cfg.Server.WebURL)
+		}
+		if cfg.Server.AppEnv != "dev" {
+			t.Fatalf("configured AppEnv was lost: %q", cfg.Server.AppEnv)
 		}
 	}
 }

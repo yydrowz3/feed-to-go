@@ -141,9 +141,18 @@ pnpm dev
 
 ### 实施记录（完成时填写）
 
-- 实施日期与变更摘要：待填写。
-- 各编号步骤的完成内容、检查结果及 commit 清单：待填写；提交 hash 在创建后反馈，不为回填自身 hash 创建额外提交。
-- 自动检查命令及结果：待填写。
-- 两账号及私信浏览器验证：待填写。
-- 后端、数据或 CORS 阻塞：待填写。
-- 本阶段交付结论：未开始。
+- 实施日期：2026-10-23；按编号推进，真实后端及双账号联调尚待完成。
+- 步骤 1：复用登录，接入真实账号资料和社交计数（失败展示身份后备与重试）；新增 TanStack Form/Zod 注册，trim/非空校验，保留合法 redirect，密码成功清理。新增注册传输与不自动登录测试。`pnpm test` 49/49、`pnpm build`、`pnpm exec tsc -b` 通过；Lint 无错误，仅既有 about 警告。作品/喜欢标签在步骤 4 接入，列表抽屉在步骤 5 接入。
+- 步骤 2：公开改密码页，允许编辑预填用户名；trim/非空校验、失败保留输入、成功返回账号页。仅清理请求所属且用户名匹配的当前会话；换号迟到响应取消。`pnpm test` 52/52、`pnpm exec tsc -b` 通过；Lint 无错误，仅既有 about 警告。
+- 步骤 3：设置页新增改名弹窗和改密码入口，复用退出确认；改名通过 Store 的 expected-token 检查提交，仅更新 access token，保留 refresh token/sessionId，取消旧读取并失效当前查看者缓存。覆盖仅 token 响应、较新凭据/换号拒绝旧改名，结合既有旧刷新测试。`pnpm test` 55/55、`pnpm exec tsc -b` 通过；Lint 无错误，仅既有 about 警告。
+- 步骤 4：账号页默认作品、首次切换喜欢才挂载独立 Query；复用 VideoCard，区分 Video 字符串日期与 Feed 秒值；加载/失败/空态独立。统一工厂沿用既有方法名，key 值对齐 `account` / `works` / `my-liked`，同步更新社交失效调用方。取消喜欢移除缓存项，新喜欢仅插入完整 Video；换号立即卸载列表、重置标签并取消读取。`pnpm test` 58/58、`pnpm exec tsc -b` 通过；Lint 无错误，仅既有 about 警告。
+- 步骤 5：共享 SocialSummary / FollowListDialog 直接消费 followers/followings Query 和后端 count；用户主页并行加载公开资料/作品，独立错误重试，匿名社交列表引导登录，私信入口保留原目标，本人不显示关注/私信自己。切资源/会话重建局部状态，复用头像后备和关注动作，关注同步目标粉丝缓存与计数。沿用 API 映射测试并扩展目标粉丝计数断言。`pnpm test` 58/58、`pnpm exec tsc -b` 通过；Lint 无错误，仅既有 about 警告。
+- 步骤 6：联系人复用本人社交 Query 并行读取，按 ID 去重、关注优先且排除本人；部分失败显示成功部分及独立重试，仅两组成功且均空才展示空态。不引入会话目录 API 或独立联系人缓存。`pnpm test` 59/59、`pnpm exec tsc -b` 通过；Lint 无错误，仅既有 about 警告。
+- 步骤 7：新增 `messages` key、消息排序/去重、会话内发送互斥和会话任务取消；有效 peer 才并行读取资料与最近 50 条历史。使用 TanStack Form/Zod，按钮和 Ctrl/⌘+Enter 共用提交，失败保留草稿、无自动重试；成功仅写入捕获会话，取消旧历史读取避免覆盖新发送。首载及本人发送后滚到底，普通渲染不抢滚动。移除阶段 03 占位、身份占位文字，修正空封面 src、失败列表空态和改名结束后的会话检查；格式化本阶段组件和测试。
+- 本地 commit 清单：步骤 1 `fca7cfd`、步骤 2 `9bc61b3`、步骤 3 `cfd82f5`、步骤 4 `6316e08`、步骤 5 `856f98d`、步骤 6 `acaf1e5`；步骤 7 随本记录提交，hash 和完整 message 见执行反馈，不回填自身 hash 追加提交。
+- 最终自动检查：`pnpm test` **65/65 通过**；`pnpm build` 通过；`pnpm lint` 无错误，仍仅有既有 `src/routes/about.tsx` Fast Refresh 警告（阶段 05 范围）；`git diff --check` 通过。新增覆盖注册 trim、本人/他人改密码及迟到响应、改名凭据先后次序、works/my-liked 换号取消、喜欢列表同步、联系人合并、消息排序去重、单会话互斥、发送取消/换号、失败不重试、旧历史不覆盖新发送。旧历史取消测试按 Query 有缓存时可返回回退数据的实际行为验证 signal 和最终缓存，不错误要求所有取消 Promise 均 reject。
+- 浏览器验证使用独立内存 fixture（临时文件在 `.git` 内，独立端口，不进入业务代码/构建，不改真实 `.env`、不操作真实账号/消息）。桌面与移动 390×844 已验证：注册空字段拦截、成功返回登录且保留合法原私信地址、登录返回原会话；改名后刷新仍显示新身份；作品/喜欢切换及字符串日期；后端 count 不用列表长度替代、头像损坏后备、粉丝抽屉导航关闭；本人主页无自关注/私信，私信本人被拒绝，匿名列表引导登录；资料成功时保留作品独立错误；联系人去重、部分失败保留有效联系人、全空状态；空会话、排序、长消息、Ctrl+Enter 发送成功清草稿、发送失败保留草稿、SPA 快速切会话后迟到响应不清新草稿、直接进入不在联系人中的有效会话；移动消息区 scrollWidth=clientWidth=343、页面宽 390、首载滚到末尾，发送和返回入口可用。
+- 截图：任务可视化目录中的 `stage03-messages-mobile.png`（内存测试数据）。未完成真实双账号发信/接收、真实改密码及持久化账号切换的浏览器验收；相关逻辑有注入传输层的 Node 测试，不能代替真实联调，上方整体验收框保持未勾选。
+- 外部条件：本次发现本机 8095 端口已监听，但对 `/account/findByID` 携带 `Origin: http://localhost:5173` 的公开 POST 返回 **403**，无 `Access-Control-Allow-Origin`；没有可用于真实联调的两个已授权测试账号。需要后端操作者核对服务与 `WEB_URL`，并提供可用账号/数据后补验 CORS、业务错误、账号和消息闭环。未修改后端或代理配置。
+- 交接：阶段 04 复用 `queryKeys.authorVideos(viewer, authorId)`（`works`）与 `queryKeys.profile(viewer, accountId)`（`account`），发布成功失效这两个 key 后可刷新本人作品/资料；喜欢使用 `queryKeys.likedVideos(viewer)`（`my-liked`），消息使用 `queryKeys.messages(viewer, peerId)`。继续复用会话 Store、请求客户端、VideoCard、SocialSummary / FollowListDialog 和共享动作，不新增服务端列表副本。
+- 本阶段交付结论：**7 个代码步骤及自动检查完成，内存 fixture 浏览器交互已验证；真实 Go 直连和双账号联调待完成**。未进入阶段 04，未 push、未部署。

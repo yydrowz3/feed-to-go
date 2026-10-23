@@ -1,11 +1,62 @@
 import { z } from "zod";
 import type { AppRuntime } from "../../lib/runtime.ts";
 import { safeRedirect } from "../../lib/navigation.ts";
+import { inViewer } from "../video/cache.ts";
 
 export const loginSchema = z.object({
   username: z.string().trim().min(1, "请输入用户名"),
   password: z.string().trim().min(1, "请输入密码"),
 });
+
+export async function registerAccount(runtime: AppRuntime, input: unknown, signal?: AbortSignal) {
+  const credentials = loginSchema.parse(input);
+  return runtime.services.account.register(credentials.username, credentials.password, signal);
+}
+
+export const changePasswordSchema = z.object({
+  username: z.string().trim().min(1, "请输入用户名"),
+  old_password: z.string().trim().min(1, "请输入旧密码"),
+  new_password: z.string().trim().min(1, "请输入新密码"),
+});
+
+export async function changePassword(runtime: AppRuntime, input: unknown, signal?: AbortSignal) {
+  const value = changePasswordSchema.parse(input);
+  const snapshot = runtime.authStore.getState();
+  await runtime.services.account.changePassword(
+    value.username,
+    value.old_password,
+    value.new_password,
+    signal,
+  );
+  signal?.throwIfAborted();
+  const current = runtime.authStore.getState();
+  if (current.sessionId !== snapshot.sessionId) throw new DOMException("会话已变更", "AbortError");
+  if (
+    snapshot.accessToken &&
+    value.username === snapshot.username &&
+    current.username === value.username
+  )
+    current.clearSession(snapshot.sessionId);
+}
+
+export async function renameAccount(runtime: AppRuntime, input: string, signal?: AbortSignal) {
+  const username = z.string().trim().min(1, "请输入新用户名").parse(input);
+  const snapshot = runtime.authStore.getState();
+  const result = await runtime.services.account.rename(username, signal);
+  signal?.throwIfAborted();
+  const current = runtime.authStore.getState();
+  if (current.sessionId !== snapshot.sessionId) throw new DOMException("会话已变更", "AbortError");
+  if (current.accessToken !== snapshot.accessToken)
+    throw new Error("登录凭据已更新，请重新提交改名");
+  current.updateTokens(snapshot.sessionId, snapshot.accessToken, result.token);
+  const predicate = (query: { queryKey: readonly unknown[] }) => inViewer(query.queryKey, snapshot);
+  await runtime.queryClient.cancelQueries({ predicate });
+  if (runtime.authStore.getState().sessionId === snapshot.sessionId)
+    await runtime.queryClient.invalidateQueries({ predicate });
+  signal?.throwIfAborted();
+  if (runtime.authStore.getState().sessionId !== snapshot.sessionId)
+    throw new DOMException("会话已变更", "AbortError");
+}
 
 export async function loginSession(
   runtime: AppRuntime,
