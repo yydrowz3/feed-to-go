@@ -43,7 +43,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Link
               key={to}
               to={to}
-              activeOptions={{ exact: to === "/" }}
+              activeOptions={{ exact: to === "/" || to === "/video" }}
               className="btn btn-ghost justify-start"
               activeProps={{ className: "btn-active text-primary" }}
             >
@@ -104,7 +104,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Link
               key={to}
               to={to}
-              activeOptions={{ exact: to === "/" }}
+              activeOptions={{ exact: to === "/" || to === "/video" }}
               className="flex min-w-14 flex-1 flex-col items-center gap-1 px-2 py-3 text-xs"
               activeProps={{ className: "bg-primary/10 text-primary" }}
             >

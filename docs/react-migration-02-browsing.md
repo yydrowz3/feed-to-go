@@ -141,7 +141,10 @@ pnpm dev
 - 步骤 3：热榜卡片/序号、1～50 整数 limit 表单、首页刷新和加载更多；公开详情按安全整数 ID 查询，登录后单独读取 isLiked，按资源/会话 key 隔离播放器；分享剪贴板失败使用原生 dialog。复用视频展示及 NativeDialog，移除阶段 02 占位导出。`pnpm test` 39/39、TypeScript、生产构建通过，Lint 仅既有警告。点赞/关注按钮随步骤 4 接入。
 - 步骤 3 提交：`b79fb41`。
 - 步骤 4：全应用 session + 对象动作门闩、Mutation 禁用、成功后 patch 当前会话各 Feed/详情/liked/作品缓存；点赞下限 0、不即时重排，标记 stale 且不立即 refetch。关注复用本人 followings query、更新关注列表并失效社交/关注流/联系人。匿名返回当前 URL 登录，换号取消请求且不写旧缓存/通知。扩展阶段 03 共用 key 工厂；4 项并发/失败/换号/缓存测试通过，`pnpm test` 43/43、TypeScript 和 Lint（仅既有警告）通过。浏览器已确认真实后端请求失败，互动联调待外部服务。
-- 自动检查命令及结果：待填写。
-- 浏览器视频与互动验证：待填写。
-- 后端异步读取延迟、数据或 CORS 阻塞：待填写。
-- 本阶段交付结论：未开始。
+- 步骤 4 提交：`c1518be`。
+- 步骤 5：共享 CommentDrawer，打开/切视频即加载，关闭卸载旧 query；TanStack Form + Zod trim 校验、成功清草稿/失败保留、本人删除确认与缓存移除、MQ 延迟提示。请求捕获视频 ID，关闭/换视频/换号取消旧提交，旧响应不影响新草稿。原生 dialog 提供桌面右侧/移动底部布局、焦点约束、Esc/遮罩关闭及触发按钮焦点恢复。新增 4 项评论测试和四类 Feed 第二页的传输 fixture 测试。格式化本阶段新增文件，并在浏览器检查中修正 StrictMode ref 重挂载播放、night 主题生成和详情页发布导航误高亮；提交 hash 见执行反馈。
+- 自动检查（从 `apps/web` 执行）：`pnpm test` **48/48 通过**；`pnpm build` 通过；`pnpm lint` 无错误、仅 `src/routes/about.tsx` 的既有 Fast Refresh 警告；`git diff --check` 通过。未新增或升级依赖，未修改后端、真实 `.env`、锁文件或 `_deprecated`。
+- 浏览器验证环境：使用内置浏览器，桌面 1085×916、移动 390×844。真实配置下请求显示 `Failed to fetch`，因此另用独立 Node HTTP fixture（127.0.0.1:8096）与单独 Vite 进程（127.0.0.1:5174，进程级 `VITE_API_BASE` 覆盖）验证前端；14 条 fixture 视频，FFmpeg 生成本地 MP4/JPEG，媒体支持 Range。fixture 服务和素材位于本次聊天的 visualizations 目录，未进入业务代码或生产构建。
+- fixture 浏览器结果：滚过第 13 条时保留 14 个 section、挂载 3 个 video、仅 1 个播放；移动容器高度 636、scrollHeight 8904，activeIndex=12；切换桌面尺寸后仍保持 index=12。默认静音自动播放、点击恢复、方向键、M、空格及 C 评论入口通过；评论输入 `mm` 不触发静音，Esc 关闭和按钮触发后的焦点恢复通过。匿名关注显示登录引导，搜索无匹配仍保留下一原始页手动加载入口。热榜 limit=3 后为 3 条首页，离开详情后 DOM 无 video。点赞/关注成功后首页与详情共享状态，分享复制前端 `/video/1` 链接，评论首次加载、空白拦截、提交清草稿、仅本人删除和确认后刷新通过。桌面右抽屉和移动底部面板无横向溢出。
+- 验证限制：剪贴板拒绝后的备用 dialog、输入法组合、真实触屏双击、真实两个账号及 MQ 延迟未完成人工实测；快捷键排除逻辑、并发动作、取消/换号、失败保留状态及 DB 回退游标有 Node 测试。真实 Redis 热榜第二页、Go CORS/业务错误响应与实际媒体仍需后端环境和账号数据后补验。fixture 的 CORS/互动通过不能替代真实 Go 后端联调，以上阶段验收复选框保持未勾选。
+- 本阶段交付结论：**5 个代码步骤及自动检查完成，fixture 浏览器交互已验证；真实直连联调待完成**。阶段 03 可复用 Feed queries、VideoCard、播放器、LikeButton/useLikeAction、FollowButton/useFollowings、CommentDrawer 和 session/viewer key 工厂，不能复制维护第二套列表或会话状态。本次仅阶段 02，不进入 03、不 push、不部署。
