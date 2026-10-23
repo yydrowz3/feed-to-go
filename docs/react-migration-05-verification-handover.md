@@ -124,6 +124,11 @@ pnpm preview --host 127.0.0.1
 - 实施日期：2026-10-24；从阶段 01～04 已有实现继续阶段 05，不重复实现历史步骤。
 - 步骤 1：全部目标路由已装配真实 feature 页面。删除无人引用的 StagePages、StagePlaceholder、`/about` 模板路由及模板 favicon/icons；入口使用中文语言标记及 Feed to Go 标题。路由树由 Vite 插件重建。确认唯一 runtime/QueryClient、RouterProvider、AppShell、Toaster 和会话 Store；未新增/升级依赖，锁文件不变，src 无 Vue/Pinia/spark-md5/_deprecated/error-report 依赖。版本 **0.1.7 → 0.1.8**。
   - 检查：`pnpm test` 78/78、`pnpm build`、`pnpm lint` 通过；Lint 0 错误、0 警告，清理标识搜索无命中。已有真实联调缺项仍待验。
+- 步骤 2：样式/直连审计通过。src 仅 index.css，内容为 Tailwind 导入和 daisyUI night 配置；无业务 style、CSS 注入或额外样式文件；条件 class 均是完整静态类，上传进度使用原生 value/max。所有 API 经统一客户端，JSON/FormData 直接 POST 到配置地址，不使用跨域 Cookie；媒体相对路径按后端 origin 补全。Vite 无代理、默认 `/api` 或 API_PROXY_TARGET，依赖/锁文件未变。本步仅验证/文档，版本保持 **0.1.8**。
+  - 真实服务：`http://localhost:8095/video/chunk/init` 的 OPTIONS（Origin `http://localhost:5173`）返回 204，允许 POST/Authorization/Content-Type；无 token 的 `/account/logout` 返回 401 JSON 且保留允许该 Origin 的响应头。
+  - 浏览器：开发首页 `http://localhost:5173/` 真实读取后端后显示“暂无视频”，控制台无 error/warn。当前没有媒体数据，不能据此通过媒体直连/播放验收。
+  - preview 默认 Origin `http://localhost:4173` 的预检返回 403、无允许头；后续生产 preview 使用已允许的 5173 端口，不修改后端或设置代理。生产地址须在构建时提供，改地址须重建，完整操作说明在步骤 6 写入 README。
+  - 用户于 2026-10-24 确认暂时没有测试账号及有效 MP4/封面；真实鉴权、双账号互动及有效媒体闭环明确待验。
 - 各编号步骤的审计/回归结果及 commit 清单：待填写；提交 hash 在创建后反馈，不为回填自身 hash 创建额外提交。
 - 测试数量、build 和 lint 结果：待填写。
 - 浏览器与真实后端验收结果：待填写。
