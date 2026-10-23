@@ -121,7 +121,9 @@ pnpm preview --host 127.0.0.1
 
 ### 实施记录（完成时填写）
 
-- 实施日期与清理/修复摘要：待填写。
+- 实施日期：2026-10-24；从阶段 01～04 已有实现继续阶段 05，不重复实现历史步骤。
+- 步骤 1：全部目标路由已装配真实 feature 页面。删除无人引用的 StagePages、StagePlaceholder、`/about` 模板路由及模板 favicon/icons；入口使用中文语言标记及 Feed to Go 标题。路由树由 Vite 插件重建。确认唯一 runtime/QueryClient、RouterProvider、AppShell、Toaster 和会话 Store；未新增/升级依赖，锁文件不变，src 无 Vue/Pinia/spark-md5/_deprecated/error-report 依赖。版本 **0.1.7 → 0.1.8**。
+  - 检查：`pnpm test` 78/78、`pnpm build`、`pnpm lint` 通过；Lint 0 错误、0 警告，清理标识搜索无命中。已有真实联调缺项仍待验。
 - 各编号步骤的审计/回归结果及 commit 清单：待填写；提交 hash 在创建后反馈，不为回填自身 hash 创建额外提交。
 - 测试数量、build 和 lint 结果：待填写。
 - 浏览器与真实后端验收结果：待填写。
