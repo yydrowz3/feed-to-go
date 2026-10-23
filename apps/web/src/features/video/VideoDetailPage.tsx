@@ -22,9 +22,10 @@ function VideoDetail({ id }: { id: number }) {
   return query.data && <DetailPlayer key={`${auth.sessionId}:${id}`} video={query.data} />
 }
 function DetailPlayer({ video }: { video: Video }) {
+  const auth = useAuth()
   const liked = useLikedVideo(video.id)
   const player = useVideoPlayer(video.id)
   useVideoShortcuts({ player })
   const item = { ...video, author: { id: video.author_id, username: video.username }, create_time: new Date(video.create_time).getTime() / 1000, is_liked: liked.data?.is_liked ?? false }
-  return <div className="min-h-0 flex-1"><FeedSlide item={item} mounted active player={player} detail />{liked.isError && <p role="alert" className="absolute right-4 top-24 rounded-box bg-base-200 p-3">点赞状态加载失败 <button className="btn btn-xs" onClick={() => void liked.refetch()}>重试</button></p>}</div>
+  return <div className="min-h-0 flex-1"><FeedSlide item={item} mounted active player={player} detail likeReady={!auth.accessToken || !!liked.data} />{liked.isError && <p role="alert" className="absolute right-4 top-24 rounded-box bg-base-200 p-3">点赞状态加载失败 <button className="btn btn-xs" onClick={() => void liked.refetch()}>重试</button></p>}</div>
 }
