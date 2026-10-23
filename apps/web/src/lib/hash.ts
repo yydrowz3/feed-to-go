@@ -1,11 +1,11 @@
-type HashOptions = { signal?: AbortSignal; onProgress?: (fraction: number) => void }
+type Hasher = { init(): unknown; update(bytes: Uint8Array): unknown; digest(format: 'hex'): string }
+type HashOptions = { signal?: AbortSignal; onProgress?: (fraction: number) => void; createHasher?: () => Promise<Hasher> }
 const READ_SIZE = 2 * 1024 * 1024
 
-export async function computeFileMd5(file: Blob, { signal, onProgress }: HashOptions = {}): Promise<string> {
+export async function computeFileMd5(file: Blob, { signal, onProgress, createHasher }: HashOptions = {}): Promise<string> {
   signal?.throwIfAborted()
-  const { createMD5 } = await import('hash-wasm')
+  const hasher = await (createHasher ? createHasher() : import('hash-wasm').then(module => module.createMD5()))
   signal?.throwIfAborted()
-  const hasher = await createMD5()
   hasher.init()
   onProgress?.(0)
   for (let offset = 0; offset < file.size; offset += READ_SIZE) {

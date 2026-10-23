@@ -5,7 +5,7 @@ export function createVideoApi(client: ApiClient) {
   return {
     async getDetail(id: number, signal?: AbortSignal) { return normalizeVideo(await client.postJson<Video>('/video/getDetail', { id }, { auth: 'none', signal })) },
     async listByAuthorID(authorId: number, signal?: AbortSignal) { return normalizeVideoList(await client.postJson<Video[] | null>('/video/listByAUthorID', { author_id: authorId }, { auth: 'none', signal })) },
-    publish: (input: PublishInput, signal?: AbortSignal) => client.postJson<Video>('/video/publish', input, { auth: 'required', signal }),
+    publish: async (input: PublishInput, signal?: AbortSignal) => normalizeVideo(await client.postJson<Video>('/video/publish', input, { auth: 'required', signal })),
     uploadCover(file: File, signal?: AbortSignal) {
       const form = new FormData(); form.append('file', file)
       return client.postForm<UploadResponse>('/video/uploadCover', form, { auth: 'required', signal })
