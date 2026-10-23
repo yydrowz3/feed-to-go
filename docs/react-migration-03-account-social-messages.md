@@ -156,3 +156,7 @@ pnpm dev
 - 外部条件：本次发现本机 8095 端口已监听，但对 `/account/findByID` 携带 `Origin: http://localhost:5173` 的公开 POST 返回 **403**，无 `Access-Control-Allow-Origin`；没有可用于真实联调的两个已授权测试账号。需要后端操作者核对服务与 `WEB_URL`，并提供可用账号/数据后补验 CORS、业务错误、账号和消息闭环。未修改后端或代理配置。
 - 交接：阶段 04 复用 `queryKeys.authorVideos(viewer, authorId)`（`works`）与 `queryKeys.profile(viewer, accountId)`（`account`），发布成功失效这两个 key 后可刷新本人作品/资料；喜欢使用 `queryKeys.likedVideos(viewer)`（`my-liked`），消息使用 `queryKeys.messages(viewer, peerId)`。继续复用会话 Store、请求客户端、VideoCard、SocialSummary / FollowListDialog 和共享动作，不新增服务端列表副本。
 - 本阶段交付结论：**7 个代码步骤及自动检查完成，内存 fixture 浏览器交互已验证；真实 Go 直连和双账号联调待完成**。未进入阶段 04，未 push、未部署。
+
+#### 2026-10-24 阶段 05 交接复核
+
+阶段 05 复验：公开账号子页、字段拦截、匿名私信/设置守卫、用户资料失败及独立作品空态通过；真实服务 CORS 已允许 localhost:5173，不再沿用旧 403 为当前结论。用户无测试账号，账号更改、社交及双账号私信仍待验。 当前版本 0.1.9；完整实际结果及补验步骤见 [最终验收记录](react-migration-verification.md)。阶段总验收保持未勾选。

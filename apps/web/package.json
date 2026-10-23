@@ -55,6 +55,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
+    "@faker-js/faker": "^10.6.0",
     "@rolldown/plugin-babel": "^0.2.4",
     "@tanstack/router-plugin": "^1.168.47",
     "@types/babel__core": "^7.20.5",

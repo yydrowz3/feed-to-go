@@ -183,3 +183,7 @@ pnpm dev
 - 后续：后端允许实际前端 origin、POST、Authorization、Content-Type、OPTIONS 及错误响应后，配置本地 VITE_API_BASE 并补齐上方未勾选的人工验收。账号凭据由用户在浏览器输入，不写入文档和日志。
 - 阶段 02 沿用 runtime.services、runtime.authStore、runtime.queryClient、queryKeys、共享状态组件与哈希工具，仅替换本阶段的对应占位页。示例 `/about` 留待阶段 05 清理。
 - 本阶段交付结论：代码实现和自动检查完成；真实直连及浏览器人工验收待完成，阶段总验收未通过，索引阶段完成框保持未勾选。
+
+#### 2026-10-24 阶段 05 交接复核
+
+阶段 05 复验：80 项测试、生产构建及 Lint 0 警告通过；当前真实 localhost:5173 Origin 的上传 OPTIONS 和 401 CORS 可读，公开页面/匿名守卫及生产 WASM 已验证。早期无浏览器/后端未就绪为历史记录；当前仍无测试账号，真实登录/刷新/退出/换号未验收。 当前版本 0.1.9；完整实际结果及补验步骤见 [最终验收记录](react-migration-verification.md)。阶段总验收保持未勾选。
