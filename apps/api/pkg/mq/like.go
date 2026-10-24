@@ -72,3 +72,10 @@ func (l *LikeMQ) publish(ctx context.Context, action, routingKey string, userID,
 	}
 	return PublishJSON(ctx, l.ch, likeExchange, routingKey, event)
 }
+
+func (m *LikeMQ) Close() error {
+	if m == nil || m.ch == nil || m.ch.IsClosed() {
+		return nil
+	}
+	return m.ch.Close()
+}

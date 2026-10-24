@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"feed-to-go/pkg/logging"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -34,7 +33,7 @@ func DeclareTopic(ch *amqp.Channel, exchange string, queue string, bindingKey st
 		return err
 	}
 	if err := DeclareDLX(ch, queue); err != nil {
-		logging.Sugar.Warnf("DLX declare failed for %s: %v", queue, err)
+		return err
 	}
 
 	return nil

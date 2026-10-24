@@ -73,3 +73,10 @@ func (s *SocialMQ) publish(ctx context.Context, action, routingKey string, follo
 
 	return PublishJSON(ctx, s.ch, socialExchange, routingKey, evt)
 }
+
+func (m *SocialMQ) Close() error {
+	if m == nil || m.ch == nil || m.ch.IsClosed() {
+		return nil
+	}
+	return m.ch.Close()
+}

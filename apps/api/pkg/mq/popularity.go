@@ -62,3 +62,10 @@ func (p *PopularityMQ) Update(ctx context.Context, videoID uint, change int64) e
 	}
 	return PublishJSON(ctx, p.ch, popularityExchange, popularityUpdateRK, event)
 }
+
+func (m *PopularityMQ) Close() error {
+	if m == nil || m.ch == nil || m.ch.IsClosed() {
+		return nil
+	}
+	return m.ch.Close()
+}

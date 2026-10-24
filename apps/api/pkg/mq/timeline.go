@@ -61,3 +61,10 @@ func (t *TimelineMQ) PublishVideo(ctx context.Context, videoID uint, createTime 
 
 	return PublishJSON(ctx, t.ch, timelineExchange, timelinePublishRK, timeline)
 }
+
+func (m *TimelineMQ) Close() error {
+	if m == nil || m.ch == nil || m.ch.IsClosed() {
+		return nil
+	}
+	return m.ch.Close()
+}

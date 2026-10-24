@@ -1,7 +1,8 @@
 package api
 
 import (
-	"context"
+	"time"
+
 	"feed-to-go/internal/auth"
 	"feed-to-go/internal/services/account"
 	"feed-to-go/internal/services/chunk"
@@ -11,22 +12,18 @@ import (
 	"feed-to-go/internal/services/message"
 	"feed-to-go/internal/services/social"
 	"feed-to-go/internal/services/video"
-	"feed-to-go/internal/worker"
 	"feed-to-go/pkg/cache"
-	"feed-to-go/pkg/logging"
-	"feed-to-go/pkg/mq"
 	"feed-to-go/pkg/ratelimit"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
-func SetRouter(db *gorm.DB, cache *cache.Client, rmq *mq.RabbitMQ, webURL, appEnv string) *gin.Engine {
+func buildRouter(db *gorm.DB, cache *cache.Client, runtime *Runtime, webURL, appEnv string) (*gin.Engine, error) {
 	r := gin.Default()
 	r.Use(corsMiddleware(webURL, appEnv))
 	if err := r.SetTrustedProxies(nil); err != nil {
-		logging.Sugar.Fatalf("Failed to set trusted proxies: %v", err)
+		return nil, err
 	}
 	r.GET("/healthz", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
@@ -65,11 +62,7 @@ func SetRouter(db *gorm.DB, cache *cache.Client, rmq *mq.RabbitMQ, webURL, appEn
 
 	// video
 	videoRepository := video.NewVideoRepository(db)
-	popularityMQ, err := mq.NewPopularityMQ(rmq)
-	if err != nil {
-		logging.Sugar.Warnf("PopularityMQ init failed (mq disabled): %v", err)
-		popularityMQ = nil
-	}
+	popularityMQ := runtime.popularityMQ
 	videoService := video.NewVideoService(videoRepository, cache, popularityMQ)
 	videoHandler := video.NewVideoHandler(videoService, accountService)
 	chunkHandler := chunk.NewChunkUploadHandler(cache)
@@ -91,11 +84,7 @@ func SetRouter(db *gorm.DB, cache *cache.Client, rmq *mq.RabbitMQ, webURL, appEn
 	}
 
 	// like
-	likeMQ, err := mq.NewLikeMQ(rmq)
-	if err != nil {
-		logging.Sugar.Warnf("LikeMQ init failed (mq disabled): %v", err)
-		likeMQ = nil
-	}
+	likeMQ := runtime.likeMQ
 	likeRepository := like.NewLikeRepository(db)
 	likeService := like.NewLikeService(likeRepository, videoRepository, cache, likeMQ, popularityMQ)
 	likeHandler := like.NewLikeHandler(likeService)
@@ -111,11 +100,7 @@ func SetRouter(db *gorm.DB, cache *cache.Client, rmq *mq.RabbitMQ, webURL, appEn
 
 	// comment
 	commentRepository := comment.NewCommentRepository(db)
-	commentMQ, err := mq.NewCommentMQ(rmq)
-	if err != nil {
-		logging.Sugar.Warnf("CommentMQ init failed (mq disabled): %v", err)
-		commentMQ = nil
-	}
+	commentMQ := runtime.commentMQ
 	commentService := comment.NewCommentService(commentRepository, videoRepository, cache, commentMQ, popularityMQ)
 	commentHandler := comment.NewCommentHandler(commentService, accountService)
 	commentGroup := r.Group("/comment")
@@ -130,11 +115,7 @@ func SetRouter(db *gorm.DB, cache *cache.Client, rmq *mq.RabbitMQ, webURL, appEn
 	}
 
 	// social
-	socialMQ, err := mq.NewSocialMQ(rmq)
-	if err != nil {
-		logging.Sugar.Warnf("SocialMQ init failed (mq disabled): %v", err)
-		socialMQ = nil
-	}
+	socialMQ := runtime.socialMQ
 	socialRepository := social.NewSocialRepository(db)
 	socialService := social.NewSocialService(socialRepository, accountRepository, socialMQ, cache)
 	socialHandler := social.NewSocialHandler(socialService)
@@ -180,62 +161,8 @@ func SetRouter(db *gorm.DB, cache *cache.Client, rmq *mq.RabbitMQ, webURL, appEn
 		protectedMessageGroup.POST("/list", messageHandler.List)
 	}
 
-	// worker
-	timelineMQ, err := mq.NewTimelineMQ(rmq)
-	if err != nil {
-		logging.Sugar.Warnf("timelineMQ init failed (mq disabled): %v", err)
-		timelineMQ = nil
-	}
-	worker.StartOutboxPoller(db, timelineMQ)
-	worker.StartConsumer(timelineMQ, "video.timeline.update.queue", cache, rmq)
-
-	// SSE notification
-	if rmq != nil {
-		if notifCh, err := rmq.NewChannel(); err == nil {
-			if err := mq.DeclareTopic(notifCh, "like.events", "notification.like", "like.like"); err != nil {
-				logging.Sugar.Warnf("notification like topic init failed: %v", err)
-			}
-			if err := mq.DeclareTopic(notifCh, "comment.events", "notification.comment", "comment.publish"); err != nil {
-				logging.Sugar.Warnf("notification comment topic init failed: %v", err)
-			}
-			if err := mq.DeclareTopic(notifCh, "social.events", "notification.social", "social.follow"); err != nil {
-				logging.Sugar.Warnf("notification social topic init failed: %v", err)
-			}
-			notifCh.Close()
-		}
-	}
-	sseHub := worker.NewSSEHub(db)
 	notifGroup := r.Group("/notification")
-	notifGroup.Use(sseHub.SSERequireAuth())
-	sseHub.RegisterRoutes(r, notifGroup)
-
-	go func() {
-		if rmq != nil {
-			hub := sseHub
-			ctx := context.Background()
-			// 每个 notification worker 独立 Channel + 自动重连
-			for _, q := range []string{"notification.like", "notification.comment", "notification.social"} {
-				go func(queue string) {
-					for {
-						ch, err := rmq.NewChannel()
-						if err != nil {
-							logging.Sugar.Warnf("notification-%s: 创建 Channel 失败: %v, 5秒后重试", queue, err)
-							time.Sleep(5 * time.Second)
-							continue
-						}
-						w := worker.NewNotificationWorker(ch, db, queue, hub)
-						if err := w.Run(ctx); err != nil { // 阻塞在 Run
-							logging.Sugar.Warnf("notification-%s: %v, 5秒后重连...", queue, err)
-						}
-						ch.Close()
-						time.Sleep(5 * time.Second)
-					}
-				}(q)
-			}
-		} else {
-			logging.Sugar.Warnf("Notification SSE disabled (MQ not available)")
-		}
-	}()
-
-	return r
+	notifGroup.Use(runtime.Hub.SSERequireAuth())
+	runtime.Hub.RegisterRoutes(r, notifGroup)
+	return r, nil
 }

@@ -75,3 +75,10 @@ func (c *CommentMQ) publish(ctx context.Context, action, routingKey string, evt 
 	evt.OccurredAt = time.Now().UTC()
 	return PublishJSON(ctx, c.ch, commentExchange, routingKey, evt)
 }
+
+func (m *CommentMQ) Close() error {
+	if m == nil || m.ch == nil || m.ch.IsClosed() {
+		return nil
+	}
+	return m.ch.Close()
+}

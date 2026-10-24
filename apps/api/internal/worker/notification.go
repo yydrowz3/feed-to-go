@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"feed-to-go/pkg/logging"
-	"feed-to-go/pkg/mq"
 	"time"
+
+	"feed-to-go/pkg/mq"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"gorm.io/gorm"
@@ -45,50 +45,11 @@ func (w *NotificationWorker) Run(ctx context.Context) error {
 	if w.queue == "" {
 		return errors.New("queue is required")
 	}
-	if err := w.db.WithContext(ctx).AutoMigrate(&Notification{}); err != nil {
-		return err
-	}
-	deliveries, err := w.ch.Consume(w.queue, "", false, false, false, false, nil)
-	if err != nil {
-		return err
-	}
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case d, ok := <-deliveries:
-			if !ok {
-				return errors.New("deliveries channel closed")
-			}
-			w.handleDelivery(ctx, d)
-		}
-	}
+	return consume(ctx, w.ch, w.queue, w.handleDelivery, nil)
 }
 
 func (w *NotificationWorker) handleDelivery(ctx context.Context, d amqp.Delivery) {
-	const maxRetries = 3
-	for i := 0; i <= maxRetries; i++ {
-		select {
-		case <-ctx.Done():
-			_ = d.Nack(false, true)
-			return
-		default:
-		}
-		if err := w.process(ctx, d); err != nil {
-			if i >= maxRetries {
-				logging.Sugar.Warnf("notification worker: 重试 %d 次后仍失败, 丢弃: %v", maxRetries, err)
-				_ = d.Ack(false)
-				return
-			}
-			wait := time.Duration(1<<uint(i)) * time.Second
-			logging.Sugar.Warnf("notification worker: 处理失败, %v 后重试 (%d/%d): %v", wait, i+1, maxRetries, err)
-			time.Sleep(wait)
-			continue
-		}
-		_ = d.Ack(false)
-		return
-	}
-
+	retryDelivery(ctx, d, func() error { return w.process(ctx, d) })
 }
 
 func (w *NotificationWorker) process(ctx context.Context, d amqp.Delivery) error {

@@ -1,30 +1,69 @@
 package mq
 
 import (
+	"context"
 	"errors"
-	"feed-to-go/internal/config"
 	"net"
 	"net/url"
 	"strconv"
+	"time"
+
+	"feed-to-go/internal/config"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type RabbitMQ struct {
-	Conn *amqp.Connection
+	Conn      *amqp.Connection
+	transport net.Conn
 }
 
 func NewRabbitMQ(cfg *config.RabbitMQConfig) (*RabbitMQ, error) {
+	return NewRabbitMQContext(context.Background(), cfg)
+}
+
+// NewRabbitMQContext bounds TCP, TLS and AMQP handshakes, not the connection lifetime.
+func NewRabbitMQContext(ctx context.Context, cfg *config.RabbitMQConfig) (*RabbitMQ, error) {
 	uri, err := connectionURL(cfg)
 	if err != nil {
 		return nil, err
 	}
-	conn, err := amqp.Dial(uri)
+	var transport net.Conn
+	stopHandshake := func() bool { return true }
+	conn, err := amqp.DialConfig(uri, amqp.Config{Dial: func(network, address string) (net.Conn, error) {
+		var dialErr error
+		transport, dialErr = (&net.Dialer{Timeout: 10 * time.Second}).DialContext(ctx, network, address)
+		if dialErr != nil {
+			return nil, dialErr
+		}
+		deadline := time.Now().Add(10 * time.Second)
+		if d, ok := ctx.Deadline(); ok && d.Before(deadline) {
+			deadline = d
+		}
+		_ = transport.SetDeadline(deadline)
+		stopHandshake = context.AfterFunc(ctx, func() { _ = transport.Close() })
+		return transport, nil
+	}})
+	stopHandshake()
 	if err != nil {
-		return nil, err
+		if transport != nil {
+			_ = transport.Close()
+		}
+		// Do not include an input URI (and its credentials) in startup logs.
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		return nil, errors.New("RabbitMQ connection or handshake failed")
 	}
+	_ = transport.SetDeadline(time.Time{})
+	return &RabbitMQ{Conn: conn, transport: transport}, nil
+}
 
-	return &RabbitMQ{Conn: conn}, nil
+// Abort immediately releases blocked AMQP RPCs during timeout or forced shutdown.
+func (r *RabbitMQ) Abort() {
+	if r != nil && r.transport != nil {
+		_ = r.transport.Close()
+	}
 }
 
 func connectionURL(cfg *config.RabbitMQConfig) (string, error) {

@@ -3,12 +3,13 @@ package worker
 import (
 	"encoding/json"
 	"errors"
-	"feed-to-go/internal/auth"
 	"fmt"
 	"io"
 	"net/http"
 	"sync"
 	"time"
+
+	"feed-to-go/internal/auth"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -17,13 +18,15 @@ import (
 var _ NotificationHub = (*SSEHub)(nil)
 
 type SSEHub struct {
-	mu      sync.RWMutex
-	clients map[uint][]chan *Notification
-	db      *gorm.DB
+	mu       sync.RWMutex
+	clients  map[uint][]chan *Notification
+	db       *gorm.DB
+	done     chan struct{}
+	stopOnce sync.Once
 }
 
 func NewSSEHub(db *gorm.DB) *SSEHub {
-	return &SSEHub{clients: make(map[uint][]chan *Notification), db: db}
+	return &SSEHub{clients: make(map[uint][]chan *Notification), db: db, done: make(chan struct{})}
 }
 
 func (h *SSEHub) Push(userID uint, n *Notification) {
@@ -112,6 +115,8 @@ func (h *SSEHub) SSEHandler(c *gin.Context) {
 
 	for {
 		select {
+		case <-h.done:
+			return
 		case <-ctx.Done():
 			return
 		case n, ok := <-ch: // 发送消息到客户端
@@ -215,3 +220,6 @@ func currentAccountID(c *gin.Context) (uint, bool) {
 	userID, ok := accountID.(uint)
 	return userID, ok && userID != 0
 }
+
+// StopStreams releases long-lived SSE handlers before HTTP shutdown.
+func (h *SSEHub) StopStreams() { h.stopOnce.Do(func() { close(h.done) }) }

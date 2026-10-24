@@ -4,11 +4,12 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"feed-to-go/internal/config"
 	"fmt"
 	"net"
 	"strconv"
 	"time"
+
+	"feed-to-go/internal/config"
 
 	redis "github.com/redis/go-redis/v9"
 )
@@ -28,9 +29,10 @@ func NewClient(rdb *redis.Client, keyPrefix string) *Client {
 
 func NewFromCfg(cfg *config.RedisConfig) (*Client, error) {
 	opts := &redis.Options{
-		Addr:     net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port)),
-		Password: cfg.Password,
-		DB:       cfg.DB,
+		Addr:                  net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port)),
+		Password:              cfg.Password,
+		DB:                    cfg.DB,
+		ContextTimeoutEnabled: true,
 	}
 	if cfg.TLS {
 		opts.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS12}

@@ -1,12 +1,51 @@
 package mq
 
 import (
-	"feed-to-go/internal/config"
+	"context"
+	"net"
 	"strings"
 	"testing"
+	"time"
+
+	"feed-to-go/internal/config"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
+
+func TestConnectionContextBoundsSilentAMQPAndTLSHandshakes(t *testing.T) {
+	for _, scheme := range []string{"amqp", "amqps"} {
+		t.Run(scheme, func(t *testing.T) {
+			listener, err := net.Listen("tcp", "127.0.0.1:0")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer listener.Close()
+			accepted := make(chan net.Conn, 1)
+			go func() {
+				conn, err := listener.Accept()
+				if err == nil {
+					accepted <- conn
+				}
+			}()
+			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			defer cancel()
+			started := time.Now()
+			_, err = NewRabbitMQContext(ctx, &config.RabbitMQConfig{URL: scheme + "://user:secret-password@" + listener.Addr().String() + "/"})
+			if err == nil || strings.Contains(err.Error(), "secret-password") {
+				t.Fatalf("unsafe or missing handshake error: %v", err)
+			}
+			if time.Since(started) > time.Second {
+				t.Fatal("handshake ignored context deadline")
+			}
+			select {
+			case conn := <-accepted:
+				conn.Close()
+			case <-time.After(time.Second):
+				t.Fatal("connection was never accepted")
+			}
+		})
+	}
+}
 
 func TestConnectionURL(t *testing.T) {
 	for _, tc := range []struct {

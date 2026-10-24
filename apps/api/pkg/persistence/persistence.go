@@ -1,6 +1,11 @@
 package persistence
 
 import (
+	"context"
+	"net"
+	"net/url"
+	"strconv"
+
 	"feed-to-go/internal/config"
 	"feed-to-go/internal/services/account"
 	"feed-to-go/internal/services/comment"
@@ -9,15 +14,16 @@ import (
 	"feed-to-go/internal/services/social"
 	"feed-to-go/internal/services/video"
 	"feed-to-go/internal/worker"
-	"net"
-	"net/url"
-	"strconv"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 func NewDB(dbcfg config.DatabaseConfig) (*gorm.DB, error) {
+	return NewDBContext(context.Background(), dbcfg)
+}
+
+func NewDBContext(ctx context.Context, dbcfg config.DatabaseConfig) (*gorm.DB, error) {
 	dsn := url.URL{
 		Scheme: "postgres",
 		User:   url.UserPassword(dbcfg.User, dbcfg.Password),
@@ -25,6 +31,7 @@ func NewDB(dbcfg config.DatabaseConfig) (*gorm.DB, error) {
 		Path:   "/" + dbcfg.DBName,
 	}
 	params := url.Values{}
+	params.Set("connect_timeout", "10")
 	if dbcfg.SSLMode != "" {
 		params.Set("sslmode", dbcfg.SSLMode)
 	}
@@ -33,11 +40,19 @@ func NewDB(dbcfg config.DatabaseConfig) (*gorm.DB, error) {
 	}
 	dsn.RawQuery = params.Encode()
 
-	db, err := gorm.Open(postgres.Open(dsn.String()), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(dsn.String()), &gorm.Config{DisableAutomaticPing: true})
 	if err != nil {
 		return nil, err
 	}
 
+	pool, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	if err := pool.PingContext(ctx); err != nil {
+		_ = pool.Close()
+		return nil, err
+	}
 	return db, nil
 }
 
