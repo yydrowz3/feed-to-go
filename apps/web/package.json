@@ -1,7 +1,7 @@
 {
   "name": "feed-to-go-web",
   "description": "React frontend for Feed to Go, a short-video sharing application.",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "private": true,
   "license": "UNLICENSED",
   "author": {

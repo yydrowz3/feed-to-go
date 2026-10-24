@@ -123,6 +123,48 @@ for (const changedSession of [true, false])
     assert.equal(runtime.authStore.getState().username, changedSession ? "other" : "newer");
     runtime.dispose();
   });
+
+test("rename accepts the credential refresh performed by its own request", async () => {
+  const requests = [];
+  const refreshed = namedToken(1, "测试") + "refreshed";
+  const runtime = createRuntime("https://backend.test", {
+    fetchImpl: async (url, init) => {
+      requests.push(url);
+      if (url.endsWith("/account/refresh")) return Response.json({ token: refreshed });
+      if (requests.length === 1) return Response.json({ error: "expired" }, { status: 401 });
+      assert.equal(init.headers.Authorization, `Bearer ${refreshed}`);
+      return Response.json({ token: namedToken(1, "renamed") });
+    },
+  });
+  try {
+    runtime.authStore.getState().replaceSession(token(1), "refresh");
+    const sessionId = runtime.authStore.getState().sessionId;
+    await renameAccount(runtime, "renamed");
+    assert.equal(runtime.authStore.getState().username, "renamed");
+    assert.equal(runtime.authStore.getState().sessionId, sessionId);
+    assert.equal(runtime.authStore.getState().refreshToken, "refresh");
+    assert.equal(requests.length, 3);
+  } finally {
+    runtime.dispose();
+  }
+});
+
+test("late rename preserves a newer refresh that already observed its new name", async () => {
+  const gate = deferred();
+  const runtime = createRuntime("https://backend.test", { fetchImpl: async () => gate.promise });
+  try {
+    runtime.authStore.getState().replaceSession(token(1), "refresh");
+    const snapshot = runtime.authStore.getState();
+    const newer = namedToken(1, "renamed") + "newer";
+    const pending = renameAccount(runtime, "renamed");
+    snapshot.updateTokens(snapshot.sessionId, snapshot.accessToken, newer);
+    gate.resolve(Response.json({ token: namedToken(1, "renamed") }));
+    await pending;
+    assert.equal(runtime.authStore.getState().accessToken, newer);
+  } finally {
+    runtime.dispose();
+  }
+});
 test("login trims original required fields, persists both tokens and returns safe target", async () => {
   let sent;
   const saved = new Map();

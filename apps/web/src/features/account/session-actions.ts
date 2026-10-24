@@ -46,9 +46,17 @@ export async function renameAccount(runtime: AppRuntime, input: string, signal?:
   signal?.throwIfAborted();
   const current = runtime.authStore.getState();
   if (current.sessionId !== snapshot.sessionId) throw new DOMException("会话已变更", "AbortError");
-  if (current.accessToken !== snapshot.accessToken)
+  // A 401 replay can rotate the token while this rename is in flight. Compare
+  // identity changes as well so that refresh does not discard a successful rename.
+  if (
+    current.accessToken !== snapshot.accessToken &&
+    current.username !== snapshot.username &&
+    current.username !== username
+  )
     throw new Error("登录凭据已更新，请重新提交改名");
-  current.updateTokens(snapshot.sessionId, snapshot.accessToken, result.token);
+  // A refresh that already observed the new name owns the newer credential.
+  if (current.accessToken === snapshot.accessToken || current.username !== username)
+    current.updateTokens(snapshot.sessionId, current.accessToken, result.token);
   const predicate = (query: { queryKey: readonly unknown[] }) => inViewer(query.queryKey, snapshot);
   await runtime.queryClient.cancelQueries({ predicate });
   if (runtime.authStore.getState().sessionId === snapshot.sessionId)
