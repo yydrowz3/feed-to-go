@@ -166,6 +166,14 @@ pnpm preview --host 127.0.0.1
 - 独立临时生产构建将 VITE_API_BASE 设为空，浏览器明确显示“应用配置错误”；正常 dist 和真实环境文件未变更。故障 fixture 不代替真实 Redis 宕机或生产网络故障测试，也没有用 fixture 发布成功代替真实作品证据。
 - 证据：忽略目录 `evidence/migration-browser-results.json`（13 组、12 轮）、`migration-feed-results.json`、`stage-05-media-readback.json`，截图在当前任务可视化目录 `migration-browser-checks.png`。`pnpm lint` 通过；完整最终构建在步骤 5 运行。
 
+### 本次收尾：步骤 5 最终检查与生产构建
+
+- 版本保持 **0.1.12**，本步只验证并记录。`pnpm test` **83/83**，0 失败/取消/跳过；`pnpm build`（tsc -b + Vite 8.3.5）通过，2305 modules；`pnpm lint` **0 错误/0 警告**。根目录已有素材/账号脚本的 26 项测试亦通过，未改变原批次资料。
+- 产物：主 JS **452.20 kB / gzip 134.28 kB**，CSS **101.54 kB / gzip 15.81 kB**，hash-wasm 模块 **9.96 kB**。最终业务产物 hash 与浏览器已验产物一致；无测试 fixture 或服务端 harness 打入运行入口。
+- 约束复核：src 仅框架 index.css，禁用依赖/模板/业务 style/代理搜索无命中；单一 auth Store/QueryClient/RouterProvider/AppShell/Toaster；生成路由树未手改。依赖、锁文件、真实 .env、后端和 `_deprecated` 无差异；`git diff --check` 通过。
+- 以临时验证驱动加载最终生产产物，增加“前六条 → 自动加载后六条 → 连续十条滚动”和 390×844 / 844×390 / 1440×900 横竖屏切换，确认占位高度、活动索引和仅当前播放均保持正确。补验共 **14 组 / 12 轮通过**，报告 `evidence/migration-browser-additional-results.json`；临时驱动及报告保存在忽略目录，不修改应用源码。
+- 额外的真实 FormData 重放补验首次在测试驱动的 15 秒超时内未返回，随后以 45 秒上限复验通过（进程退出 0）：旧 access token 被后一次登录替换，上传返回 **401 → 单次 refresh 200 → FormData 重放 200**；未手设 Content-Type，401/200 均允许 localhost:5174，实际封面 MD5 一致。临时封面已删除，C 账号已退出。证据 `evidence/migration-formdata-results.json`。同一时段服务日志存在依赖慢查询和 MQ 连接重试，未修改后端处理；保留首次超时事实，不用隔离结果替代本项真实 HTTP/CORS 证据。
+
 以下为原迁移验收后的新证据，保留上文历史记录与未验范围。当前版本 **0.1.10**，81 项前端测试、TypeScript/Vite 生产构建及 lint 通过。5 个真实账号（ID 1～5）、8 个浏览器分片发布作品（ID 1～8，A/B 各四项）已验证；取消/刷新续传、全部分片及媒体 MD5、Range 206、播放/拖动、自然失效会话自动刷新、双向点赞/关注/评论删除/私信读回通过。最终保留互相关注、评论 3/4 和私信 1/2，点赞基线恢复。
 
 当前 preview 为 localhost:5174，API 8095；原 5173 示例对本批以实际 origin 为准。精确 1440×900 与 390×844 使用真实生产页面的同源 iframe CSS 视口检查，无横向溢出；不代表设备仿真或跨浏览器。详情缺少 seek 入口已修复，版本仅升一次 patch，没有依赖变更、提交、推送或部署。
