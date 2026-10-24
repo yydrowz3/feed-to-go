@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -118,12 +119,20 @@ func (h *AccountHandler) Login(c *gin.Context) {
 	}
 	account, err := h.accountService.FindByUsername(c.Request.Context(), req.Username)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid username or password"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "login failed"})
+		}
 		return
 	}
 	accessToken, refreshToken, err := h.accountService.Login(c.Request.Context(), req.Username, req.Password)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) || errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid username or password"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "login failed"})
+		}
 		return
 	}
 	c.JSON(http.StatusOK, LoginResponse{Token: accessToken, RefreshToken: refreshToken, AccountID: account.ID, Username: account.Username})

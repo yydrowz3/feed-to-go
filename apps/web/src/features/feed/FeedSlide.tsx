@@ -52,6 +52,13 @@ export function FeedSlide({
           }}
           onPlay={(event) => player.onPlaybackChange(event.currentTarget)}
           onPause={(event) => player.onPlaybackChange(event.currentTarget)}
+          onLoadedMetadata={
+            detail ? (event) => player.onTimeChange(event.currentTarget) : undefined
+          }
+          onTimeUpdate={detail ? (event) => player.onTimeChange(event.currentTarget) : undefined}
+          onDurationChange={
+            detail ? (event) => player.onTimeChange(event.currentTarget) : undefined
+          }
         />
       ) : (
         <img
@@ -79,6 +86,20 @@ export function FeedSlide({
           <p className="max-h-24 overflow-auto whitespace-pre-wrap break-words text-sm">
             {item.description}
           </p>
+        )}
+        {detail && (
+          <input
+            type="range"
+            aria-label="播放进度"
+            aria-valuetext={`${player.time.toFixed(1)} / ${player.duration.toFixed(1)} 秒`}
+            min={0}
+            max={player.duration || 1}
+            step={0.1}
+            value={Math.min(player.time, player.duration)}
+            disabled={!active || player.duration <= 0}
+            className="range range-xs w-full"
+            onChange={(event) => player.seek(Number(event.currentTarget.value))}
+          />
         )}
         <div className="flex flex-wrap gap-2" onClick={(event) => event.stopPropagation()}>
           <button

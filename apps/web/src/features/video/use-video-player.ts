@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { acceptsVideoShortcut } from "./keyboard";
+import { seekVideo } from "./seek";
 
 export function useVideoPlayer(activeId?: number) {
   const videos = useRef(new Map<number, HTMLVideoElement>());
   const desired = useRef<HTMLVideoElement | null>(null);
   const [muted, setMuted] = useState(true);
   const [paused, setPaused] = useState(true);
+  const [position, setPosition] = useState({ id: activeId, time: 0, duration: 0 });
   const play = useCallback(async (element: HTMLVideoElement) => {
     try {
       await element.play();
@@ -61,7 +63,40 @@ export function useVideoPlayer(activeId?: number) {
   const onPlaybackChange = useCallback((element: HTMLVideoElement) => {
     if (element === desired.current) setPaused(element.paused);
   }, []);
-  return { register, muted, paused, togglePlay, toggleMute, onPlaybackChange };
+  const onTimeChange = useCallback(
+    (element: HTMLVideoElement) => {
+      if (element !== desired.current) return;
+      setPosition({
+        id: activeId,
+        time: element.currentTime,
+        duration: Number.isFinite(element.duration) ? element.duration : 0,
+      });
+    },
+    [activeId],
+  );
+  const seek = useCallback(
+    (seconds: number) => {
+      const element = desired.current;
+      if (element) {
+        seekVideo(element, seconds);
+        onTimeChange(element);
+      }
+    },
+    [onTimeChange],
+  );
+  const timeline = position.id === activeId ? position : { time: 0, duration: 0 };
+  return {
+    register,
+    muted,
+    paused,
+    togglePlay,
+    toggleMute,
+    onPlaybackChange,
+    onTimeChange,
+    seek,
+    time: timeline.time,
+    duration: timeline.duration,
+  };
 }
 export type VideoPlayer = ReturnType<typeof useVideoPlayer>;
 
