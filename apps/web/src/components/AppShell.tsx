@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { Link, useLocation, useNavigate, useSearch } from "@tanstack/react-router";
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
-import { Home, Flame, Plus, UserRound, MessageCircle, Settings, Search, Play } from "lucide-react";
+import { Home, Flame, Plus, UserRound, MessageCircle, Settings, Search } from "lucide-react";
 import { useAuth } from "../lib/app-context";
 import { UserAvatar } from "./UserAvatar";
 import { ThemeToggle } from "./ThemeToggle";
@@ -39,9 +39,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex h-dvh overflow-hidden bg-base-300 font-sans text-base-content">
       <aside className="hidden w-56 shrink-0 flex-col gap-6 border-r border-base-content/10 bg-base-200 p-4 md:flex">
-        <Link to="/" className="flex items-center gap-2 p-2 text-xl font-black">
-          <Play className="text-primary" />
-          Feed to Go
+        <Link to="/" className="flex items-center p-2">
+          <img
+            src={`${import.meta.env.BASE_URL}logo/feed-to-go-logo.png`}
+            alt="Feed To Go"
+            width={2172}
+            height={724}
+            className="h-auto w-full object-contain"
+          />
         </Link>
         <nav className="grid gap-2" aria-label={t("navigation.main")}>
           {links.map(({ to, label, icon: Icon }) => (
