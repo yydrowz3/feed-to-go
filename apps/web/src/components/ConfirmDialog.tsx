@@ -1,3 +1,4 @@
+import { useAppTranslation } from "../i18n/react";
 import { useEffect, useId, useRef } from "react";
 export function ConfirmDialog({
   open,
@@ -14,6 +15,7 @@ export function ConfirmDialog({
   onClose: () => void;
   onConfirm: () => void;
 }) {
+  const { t } = useAppTranslation();
   const dialog = useRef<HTMLDialogElement>(null);
   const id = useId();
   useEffect(() => {
@@ -56,10 +58,16 @@ export function ConfirmDialog({
             onClick={onClose}
             autoFocus
           >
-            取消
+            {t("common.cancel")}
           </button>
-          <button type="button" className="btn btn-error" disabled={busy} onClick={onConfirm}>
-            {busy ? "处理中…" : "确认"}
+          <button
+            type="button"
+            data-testid="confirm-action"
+            className="btn btn-error"
+            disabled={busy}
+            onClick={onConfirm}
+          >
+            {busy ? t("common.processing") : t("common.confirm")}
           </button>
         </div>
       </div>

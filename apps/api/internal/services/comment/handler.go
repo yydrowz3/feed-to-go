@@ -3,7 +3,7 @@ package comment
 import (
 	"feed-to-go/internal/auth"
 	"feed-to-go/internal/services/account"
-	"feed-to-go/internal/util"
+	"feed-to-go/pkg/apierror"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -21,25 +21,25 @@ func NewCommentHandler(service *CommentService, accountService *account.AccountS
 func (h *CommentHandler) PublishComment(c *gin.Context) {
 	var req PublishCommentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.Write(c, apierror.ValidationFailed)
 		return
 	}
 	if req.Content == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "content is required"})
+		apierror.Write(c, apierror.ValidationFailed)
 		return
 	}
 	if req.VideoID <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "video_id is required"})
+		apierror.Write(c, apierror.ValidationFailed)
 		return
 	}
 	authorId, err := auth.GetAccountID(c)
 	if err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.Write(c, apierror.AuthRequired)
 		return
 	}
 	user, err := h.accountService.FindByID(c.Request.Context(), authorId)
 	if err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.From(c, err, apierror.AccountNotFound)
 		return
 	}
 	comment := &Comment{
@@ -49,7 +49,7 @@ func (h *CommentHandler) PublishComment(c *gin.Context) {
 		Content:  req.Content,
 	}
 	if err := h.service.Publish(c.Request.Context(), comment); err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.From(c, err, apierror.CommentNotFound)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "comment published successfully"})
@@ -59,20 +59,20 @@ func (h *CommentHandler) PublishComment(c *gin.Context) {
 func (h *CommentHandler) DeleteComment(c *gin.Context) {
 	var req DeleteCommentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.Write(c, apierror.ValidationFailed)
 		return
 	}
 	accountID, err := auth.GetAccountID(c)
 	if err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.Write(c, apierror.AuthRequired)
 		return
 	}
 	if req.CommentID <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "comment_id is required"})
+		apierror.Write(c, apierror.ValidationFailed)
 		return
 	}
 	if err := h.service.Delete(c.Request.Context(), req.CommentID, accountID); err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.From(c, err, apierror.CommentNotFound)
 		return
 	}
 
@@ -82,16 +82,16 @@ func (h *CommentHandler) DeleteComment(c *gin.Context) {
 func (h *CommentHandler) GetAllComments(c *gin.Context) {
 	var req GetAllCommentsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.Write(c, apierror.ValidationFailed)
 		return
 	}
 	if req.VideoID == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "video_id is required"})
+		apierror.Write(c, apierror.ValidationFailed)
 		return
 	}
 	comments, err := h.service.GetAll(c.Request.Context(), req.VideoID)
 	if err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.From(c, err, apierror.CommentNotFound)
 		return
 	}
 	if comments == nil {

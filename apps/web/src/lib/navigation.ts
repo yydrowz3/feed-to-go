@@ -1,3 +1,4 @@
+import { AppError } from "../i18n/app-error.ts";
 function hasUnsafeCharacters(value: string): boolean {
   return Array.from(value).some(
     (char) => char === "\\" || char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127,
@@ -33,7 +34,7 @@ export function safeRedirect(value: unknown): string | undefined {
 }
 export function parseResourceId(value: string): number {
   if (!/^[1-9]\d*$/.test(value) || !Number.isSafeInteger(Number(value)))
-    throw new Error("资源 ID 必须是正安全整数");
+    throw new AppError("validation.resourceId");
   return Number(value);
 }
 export function validateSearch(search: Record<string, unknown>): { q?: string } {

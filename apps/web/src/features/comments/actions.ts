@@ -1,9 +1,10 @@
+import { AppError } from "../../i18n/app-error.ts";
 import { z } from "zod";
 import type { Comment } from "../../api/types.ts";
 import type { AppRuntime } from "../../lib/runtime.ts";
 import { queryKeys } from "../../lib/query-keys.ts";
 import { runSessionAction } from "../social/actions.ts";
-export const commentSchema = z.object({ content: z.string().trim().min(1, "请输入评论内容") });
+export const commentSchema = z.object({ content: z.string().trim().min(1, "validation.comment") });
 export function publishComment(
   runtime: AppRuntime,
   videoId: number,
@@ -34,7 +35,7 @@ export function deleteComment(
 ) {
   const viewer = runtime.authStore.getState();
   if (!viewer.accountId || viewer.accountId !== comment.author_id || comment.video_id !== videoId)
-    throw new Error("只能删除自己的评论");
+    throw new AppError("errors.deleteOwnComment");
   return runSessionAction(
     runtime,
     `comment-delete:${comment.id}`,

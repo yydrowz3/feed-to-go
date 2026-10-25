@@ -1,3 +1,4 @@
+import { useAppTranslation } from "../i18n/react";
 import { useState } from "react";
 const sizes = { sm: "size-8 text-sm", md: "size-11 text-base", lg: "size-16 text-xl" };
 const colors = [
@@ -15,8 +16,9 @@ export function UserAvatar({
   src?: string;
   size?: keyof typeof sizes;
 }) {
+  const { t } = useAppTranslation();
   const [failedSrc, setFailedSrc] = useState<string>();
-  const name = username.trim() || "匿名用户";
+  const name = username.trim() || t("common.anonymous");
   const color =
     colors[Array.from(name).reduce((sum, char) => sum + char.codePointAt(0)!, 0) % colors.length];
   return (

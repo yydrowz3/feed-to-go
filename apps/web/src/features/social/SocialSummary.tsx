@@ -1,3 +1,4 @@
+import { useAppTranslation } from "../../i18n/react";
 import { useState } from "react";
 import { useAuth } from "../../lib/app-context";
 import { useRequireLogin } from "./use-social-actions";
@@ -6,6 +7,7 @@ import { FollowListDialog } from "./FollowListDialog";
 import { ErrorState } from "../../components/ErrorState";
 
 export function SocialSummary({ targetId }: { targetId: number }) {
+  const { t, number } = useAppTranslation();
   const auth = useAuth();
   const needLogin = useRequireLogin();
   const { followers, followings } = useSocialLists(targetId);
@@ -20,7 +22,12 @@ export function SocialSummary({ targetId }: { targetId: number }) {
             if (!needLogin()) setKind("followers");
           }}
         >
-          粉丝 {auth.accessToken ? (followers.data?.follower_count ?? "—") : "登录查看"}
+          {t("social.followers")}
+          {auth.accessToken
+            ? followers.data
+              ? number(followers.data.follower_count)
+              : "—"
+            : t("social.signInToView")}
         </button>
         <button
           type="button"
@@ -29,12 +36,18 @@ export function SocialSummary({ targetId }: { targetId: number }) {
             if (!needLogin()) setKind("followings");
           }}
         >
-          关注 {auth.accessToken ? (followings.data?.followings_count ?? "—") : "登录查看"}
+          {t("social.following")}
+          {auth.accessToken
+            ? followings.data
+              ? number(followings.data.followings_count)
+              : "—"
+            : t("social.signInToView")}
         </button>
       </div>
       {(followers.isError || followings.isError) && (
         <ErrorState
-          message="社交资料加载失败"
+          message={followers.error ?? followings.error}
+          fallback="errors.socialLoad"
           retry={() => {
             if (followers.isError) void followers.refetch();
             if (followings.isError) void followings.refetch();

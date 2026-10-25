@@ -1,3 +1,4 @@
+import { useAppTranslation } from "../../i18n/react";
 import { useEffect, useState } from "react";
 import { Link, useSearch } from "@tanstack/react-router";
 import { useAuth } from "../../lib/app-context";
@@ -14,6 +15,7 @@ import { useVideoPlayer, useVideoShortcuts } from "../video/use-video-player";
 import { CommentDrawer } from "../comments/CommentDrawer";
 
 export function FeedPage() {
+  const { t } = useAppTranslation();
   const auth = useAuth();
   const [tab, setTab] = useState<FeedKind>("latest");
   const { q = "" } = useSearch({ from: "/" });
@@ -21,9 +23,9 @@ export function FeedPage() {
     <div className="flex min-h-0 flex-1 flex-col">
       <FeedTabs value={tab} onChange={setTab} />
       {tab === "following" && !auth.accessToken ? (
-        <EmptyState title="登录后查看关注的视频">
+        <EmptyState title={t("feed.signInFollowing")}>
           <Link to="/account" search={{ redirect: "/" }} className="btn btn-primary">
-            去登录
+            {t("account.goSignIn")}
           </Link>
         </EmptyState>
       ) : (
@@ -33,6 +35,7 @@ export function FeedPage() {
   );
 }
 function FeedContent({ kind, search }: { kind: FeedKind; search: string }) {
+  const { t, message: displayMessage } = useAppTranslation();
   const query = useFeedQuery(kind);
   const items = uniqueVideos(query.data?.pages ?? []);
   const filtered = filterVideos(items, search);
@@ -56,10 +59,12 @@ function FeedContent({ kind, search }: { kind: FeedKind; search: string }) {
   }, [search, index, items.length, hasNextPage, isFetching, isError, fetchNextPage]);
   if (query.isPending) return <LoadingState />;
   if (query.isError && !query.data)
-    return <ErrorState message={query.error.message} retry={() => void query.refetch()} />;
+    return <ErrorState message={query.error} retry={() => void query.refetch()} />;
   return (
     <>
-      {!filtered.length && <EmptyState title={items.length ? "没有匹配内容" : "暂无视频"} />}
+      {!filtered.length && (
+        <EmptyState title={items.length ? t("feed.noMatches") : t("feed.noVideos")} />
+      )}
       {!!filtered.length && (
         <div ref={scroller} className="min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto">
           {filtered.map((item, itemIndex) => (
@@ -78,8 +83,8 @@ function FeedContent({ kind, search }: { kind: FeedKind; search: string }) {
         className="flex shrink-0 flex-wrap items-center justify-center gap-2 bg-base-200 p-2 text-sm"
         aria-live="polite"
       >
-        {query.isError && <span role="alert">{query.error.message}</span>}
-        {broken && <span role="alert">分页游标异常，请刷新视频流。</span>}
+        {query.isError && <span role="alert">{displayMessage(query.error)}</span>}
+        {broken && <span role="alert">{t("errors.feedCursor")}</span>}
         <button
           className="btn btn-ghost btn-xs"
           disabled={query.isFetching}
@@ -88,7 +93,7 @@ function FeedContent({ kind, search }: { kind: FeedKind; search: string }) {
             void query.restart();
           }}
         >
-          刷新
+          {t("common.refresh")}
         </button>
         {query.hasNextPage ? (
           <button
@@ -96,10 +101,14 @@ function FeedContent({ kind, search }: { kind: FeedKind; search: string }) {
             disabled={query.isFetching}
             onClick={() => void query.fetchNextPage()}
           >
-            {query.isFetchingNextPage ? "加载中…" : query.isError ? "重试加载更多" : "加载更多视频"}
+            {query.isFetchingNextPage
+              ? t("common.loading")
+              : query.isError
+                ? t("feed.retryMore")
+                : t("feed.loadMoreVideos")}
           </button>
         ) : (
-          !broken && !!items.length && <span>已到底</span>
+          !broken && !!items.length && <span>{t("feed.end")}</span>
         )}
       </div>
       <CommentDrawer

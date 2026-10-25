@@ -1,3 +1,5 @@
+import { formatPlaybackTime } from "../../i18n/core";
+import { useAppTranslation } from "../../i18n/react";
 import { Link } from "@tanstack/react-router";
 import type { FeedVideoItem } from "../../api/types";
 import { useRuntime } from "../../lib/app-context";
@@ -26,6 +28,7 @@ export function FeedSlide({
   likeReady?: boolean;
   onComments?: () => void;
 }) {
+  const { t } = useAppTranslation();
   const { baseUrl } = useRuntime();
   const { register } = player;
   const like = useLikeAction(item.id, item.is_liked, likeReady);
@@ -71,7 +74,7 @@ export function FeedSlide({
       {active && player.paused && (
         <button
           className="btn btn-circle btn-lg absolute top-1/2"
-          aria-label="点击播放"
+          aria-label={t("video.tapPlay")}
           onClick={player.togglePlay}
         >
           <Play />
@@ -79,9 +82,11 @@ export function FeedSlide({
       )}
       <div className="absolute inset-x-0 bottom-0 space-y-2 bg-gradient-to-t from-black to-transparent p-6 pt-20 text-white">
         <Link to="/u/$id" params={{ id: String(item.author.id) }} className="break-words font-bold">
-          @{item.author.username}
+          @{item.author.username || t("common.anonymous")}
         </Link>
-        <h2 className="max-h-24 overflow-auto break-words text-xl font-bold">{item.title}</h2>
+        <h2 className="max-h-24 overflow-auto break-words text-xl font-bold">
+          {item.title || t("video.untitled")}
+        </h2>
         {detail && (
           <p className="max-h-24 overflow-auto whitespace-pre-wrap break-words text-sm">
             {item.description}
@@ -90,8 +95,8 @@ export function FeedSlide({
         {detail && (
           <input
             type="range"
-            aria-label="播放进度"
-            aria-valuetext={`${player.time.toFixed(1)} / ${player.duration.toFixed(1)} 秒`}
+            aria-label={t("video.progress")}
+            aria-valuetext={`${formatPlaybackTime(player.time)} / ${formatPlaybackTime(player.duration)}`}
             min={0}
             max={player.duration || 1}
             step={0.1}
@@ -104,7 +109,7 @@ export function FeedSlide({
         <div className="flex flex-wrap gap-2" onClick={(event) => event.stopPropagation()}>
           <button
             className="btn btn-circle btn-sm"
-            aria-label={player.paused ? "播放" : "暂停"}
+            aria-label={player.paused ? t("video.play") : t("video.pause")}
             disabled={!active}
             onClick={player.togglePlay}
           >
@@ -112,14 +117,14 @@ export function FeedSlide({
           </button>
           <button
             className="btn btn-circle btn-sm"
-            aria-label={player.muted ? "取消静音" : "静音"}
+            aria-label={player.muted ? t("video.unmute") : t("video.mute")}
             onClick={player.toggleMute}
           >
             {player.muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
           </button>
           {!detail && (
             <Link to="/video/$id" params={{ id: String(item.id) }} className="btn btn-sm">
-              查看详情
+              {t("video.details")}
             </Link>
           )}
           <ShareButton videoId={item.id} />
@@ -130,9 +135,14 @@ export function FeedSlide({
             ready={likeReady}
           />
           <FollowButton author={item.author} />
-          <button type="button" className="btn btn-sm" onClick={onComments}>
+          <button
+            type="button"
+            data-testid="comments-open"
+            className="btn btn-sm"
+            onClick={onComments}
+          >
             <MessageCircle size={16} />
-            评论
+            {t("comments.open")}
           </button>
         </div>
       </div>

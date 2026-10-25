@@ -1,3 +1,4 @@
+import type { MessageKey } from "../../i18n/app-error.ts";
 export type PublishStage =
   | "idle"
   | "hashing"
@@ -10,18 +11,18 @@ export type PublishStage =
   | "succeeded"
   | "failed"
   | "cancelled";
-export const stageLabels: Record<PublishStage, string> = {
-  idle: "准备发布",
-  hashing: "计算文件校验值",
-  initializing: "准备上传",
-  uploading: "上传视频",
-  checking: "核对上传进度",
-  merging: "整理视频",
-  cover: "上传封面",
-  publishing: "发布中",
-  succeeded: "发布成功",
-  failed: "发布失败，可重试",
-  cancelled: "上传已停止，可重新选择同一文件继续",
+export const stageLabels: Record<PublishStage, MessageKey> = {
+  idle: "publish.stages.idle",
+  hashing: "publish.stages.hashing",
+  initializing: "publish.stages.initializing",
+  uploading: "publish.stages.uploading",
+  checking: "publish.stages.checking",
+  merging: "publish.stages.merging",
+  cover: "publish.stages.cover",
+  publishing: "publish.stages.publishing",
+  succeeded: "publish.stages.succeeded",
+  failed: "publish.stages.failed",
+  cancelled: "publish.stages.cancelled",
 };
 export function createTaskScope(getSession: () => number) {
   let sequence = 0;

@@ -5,15 +5,16 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"feed-to-go/pkg/apierror"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 )
 
 const sessionTTL = 24 * time.Hour
 
-var ErrChunkCacheUnavailable = errors.New("chunk upload requires redis")
+var ErrChunkCacheUnavailable = apierror.UploadServiceUnavailable
 
 func (h *ChunkUploadHandler) sessionKey(uploadID string) string {
 	return h.cache.Key("chunk_upload:%s", uploadID)
@@ -30,11 +31,17 @@ func (h *ChunkUploadHandler) getSession(ctx *gin.Context, uploadID string) (*Chu
 	}
 	b, err := h.cache.GetBytes(ctx.Request.Context(), h.sessionKey(uploadID))
 	if err != nil {
-		return nil, fmt.Errorf("upload session not found")
+		if errors.Is(err, redis.Nil) {
+			return nil, apierror.UploadSessionNotFound
+		}
+		return nil, apierror.Wrap(apierror.UploadServiceUnavailable, err)
 	}
 	var s ChunkUploadSession
 	if err := json.Unmarshal(b, &s); err != nil {
-		return nil, fmt.Errorf("invalid session data")
+		return nil, apierror.Wrap(apierror.InternalError, err)
+	}
+	if s.UploadID != uploadID || s.AccountID == 0 || s.TotalChunks <= 0 || len(s.UploadedBits) != s.TotalChunks || s.ChunkSize <= 0 || s.FileSize <= 0 {
+		return nil, apierror.InternalError
 	}
 
 	return &s, nil
@@ -49,7 +56,10 @@ func (h *ChunkUploadHandler) saveSession(ctx *gin.Context, s *ChunkUploadSession
 		return err
 	}
 
-	return h.cache.SetBytes(ctx.Request.Context(), h.sessionKey(s.UploadID), b, sessionTTL)
+	if err := h.cache.SetBytes(ctx.Request.Context(), h.sessionKey(s.UploadID), b, sessionTTL); err != nil {
+		return apierror.Wrap(apierror.UploadServiceUnavailable, err)
+	}
+	return nil
 }
 
 func computeMD5(data []byte) string {

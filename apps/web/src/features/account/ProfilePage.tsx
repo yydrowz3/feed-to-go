@@ -1,3 +1,4 @@
+import { useAppTranslation } from "../../i18n/react";
 import { Link, useParams } from "@tanstack/react-router";
 import { useAuth, useRuntime } from "../../lib/app-context";
 import { parseResourceId } from "../../lib/navigation";
@@ -16,6 +17,7 @@ export function ProfilePage() {
   return <ProfileContent key={`${id}:${auth.sessionId}`} id={parseResourceId(id)} />;
 }
 function ProfileContent({ id }: { id: number }) {
+  const { t } = useAppTranslation();
   const auth = useAuth();
   const { baseUrl } = useRuntime();
   const profile = useAccount(id);
@@ -23,19 +25,25 @@ function ProfileContent({ id }: { id: number }) {
     <section className="mx-auto grid w-full max-w-3xl gap-6">
       <div className="card bg-base-200">
         <div className="card-body gap-4">
-          {profile.isPending && <LoadingState label="加载用户…" />}
+          {profile.isPending && <LoadingState label={t("account.loadingUser")} />}
           {profile.isError && (
-            <ErrorState message="用户资料加载失败" retry={() => void profile.refetch()} />
+            <ErrorState
+              message={profile.error}
+              fallback="errors.profileLoad"
+              retry={() => void profile.refetch()}
+            />
           )}
           {profile.data && (
             <>
               <UserAvatar
-                username={profile.data.username}
+                username={profile.data.username || t("common.anonymous")}
                 src={mediaUrl(profile.data.avatar_url, baseUrl)}
                 size="lg"
               />
-              <h1 className="break-words text-2xl font-bold">{profile.data.username}</h1>
-              <p className="text-sm text-base-content/60">ID：{id}</p>
+              <h1 className="break-words text-2xl font-bold">
+                {profile.data.username || t("common.anonymous")}
+              </h1>
+              <p className="text-sm text-base-content/60">ID: {id}</p>
               {profile.data.bio && (
                 <p className="whitespace-pre-wrap break-words">{profile.data.bio}</p>
               )}
@@ -45,25 +53,25 @@ function ProfileContent({ id }: { id: number }) {
                   <FollowButton author={profile.data} />
                   {auth.accessToken ? (
                     <Link to="/messages/$peerId" params={{ peerId: String(id) }} className="btn">
-                      私信
+                      {t("navigation.messages")}
                     </Link>
                   ) : (
                     <Link to="/account" search={{ redirect: `/messages/${id}` }} className="btn">
-                      登录后私信
+                      {t("messages.signInToMessage")}
                     </Link>
                   )}
                 </div>
               )}
               {id === auth.accountId && (
                 <Link to="/account" className="btn self-start">
-                  管理我的账号
+                  {t("account.manageAccount")}
                 </Link>
               )}
             </>
           )}
         </div>
       </div>
-      <h2 className="text-xl font-bold">作品</h2>
+      <h2 className="text-xl font-bold">{t("account.videos")}</h2>
       <VideoList authorId={id} />
     </section>
   );

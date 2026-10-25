@@ -1,3 +1,4 @@
+import { AppError } from "../../i18n/app-error.ts";
 import type { createVideoApi } from "../../api/video.ts";
 import type { PublishStage } from "./task.ts";
 import { computeFileMd5, computeBlobMd5 } from "../../lib/hash.ts";
@@ -53,7 +54,7 @@ export function uploadUrl(result: UploadResponse, kind: "video" | "cover"): stri
       /* reject invalid media locations */
     }
   }
-  throw Error("上传响应缺少有效媒体地址，请重试");
+  throw new AppError("errors.uploadMediaMissing");
 }
 export function normalizeChunks(value: unknown, total: number): Set<number> {
   return new Set(
@@ -71,7 +72,7 @@ export function confirmedBytes(fileSize: number, chunks: Set<number>): number {
 export async function initializeUpload(file: File, options: UploadOptions) {
   const { api, signal, onStage, onProgress } = options;
   signal.throwIfAborted();
-  if (!file.size) throw Error("请选择非空视频");
+  if (!file.size) throw new AppError("validation.videoRequired");
   if (!options.fileHash) onStage?.("hashing");
   const fileHash = options.fileHash ?? (await computeFileMd5(file, { signal }));
   signal.throwIfAborted();
@@ -89,7 +90,7 @@ export async function initializeUpload(file: File, options: UploadOptions) {
   );
   signal.throwIfAborted();
   if (typeof result?.upload_id !== "string" || !result.upload_id.trim())
-    throw Error("上传响应缺少任务标识，请重试");
+    throw new AppError("errors.uploadIdMissing");
   const uploaded = normalizeChunks(result.uploaded_chunks, totalChunks);
   onProgress?.(confirmedBytes(file.size, uploaded));
   return { uploadId: result.upload_id, totalChunks, uploaded };
@@ -111,7 +112,7 @@ export async function uploadMissing(
       try {
         const result = await api.uploadChunk(state.uploadId, index, chunkHash, chunk, signal);
         signal.throwIfAborted();
-        if (result?.chunk_index !== index) throw Error("分片确认不匹配，请重试");
+        if (result?.chunk_index !== index) throw new AppError("errors.chunkMismatch");
         break;
       } catch (error) {
         signal.throwIfAborted();
@@ -136,14 +137,14 @@ export async function uploadVideoChunked(
     onStage?.("checking");
     const result = await api.chunkStatus(state.uploadId, signal);
     signal.throwIfAborted();
-    if (result?.total_chunks !== state.totalChunks) throw Error("服务端分片数量不匹配，请重试");
+    if (result?.total_chunks !== state.totalChunks) throw new AppError("errors.chunkCountMismatch");
     state.uploaded = normalizeChunks(result.uploaded_chunks, state.totalChunks);
     onProgress?.(confirmedBytes(file.size, state.uploaded));
     return state.uploaded.size === state.totalChunks;
   }
   if (!(await check())) {
     await uploadMissing(file, state, options);
-    if (!(await check())) throw Error("仍有分片未确认，请重试以继续上传");
+    if (!(await check())) throw new AppError("errors.chunksUnconfirmed");
   }
   signal.throwIfAborted();
   onStage?.("merging");
@@ -152,7 +153,7 @@ export async function uploadVideoChunked(
     result = await api.completeChunkUpload(state.uploadId, signal);
   } catch (error) {
     signal.throwIfAborted();
-    if (retryable(error)) throw Error("视频整理结果暂时无法确认，请重新选择同一文件恢复上传");
+    if (retryable(error)) throw new AppError("errors.mergeUncertain", undefined, error);
     throw error;
   }
   signal.throwIfAborted();

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"feed-to-go/internal/util"
+	"feed-to-go/pkg/apierror"
 	"feed-to-go/pkg/cache"
 	"feed-to-go/pkg/mq"
 	"strconv"
@@ -27,19 +28,19 @@ func NewVideoService(repo *VideoRepository, cache *cache.Client, popularityMQ *m
 
 func (vs *VideoService) Publish(ctx context.Context, video *Video) error {
 	if video == nil {
-		return errors.New("video is nil")
+		return apierror.ValidationFailed
 	}
 	video.Title = strings.TrimSpace(video.Title)
 	video.PlayURL = strings.TrimSpace(video.PlayURL)
 	video.CoverURL = strings.TrimSpace(video.CoverURL)
 	if video.Title == "" {
-		return errors.New("title is required")
+		return apierror.ValidationFailed
 	}
 	if video.PlayURL == "" {
-		return errors.New("play url is required")
+		return apierror.ValidationFailed
 	}
 	if video.CoverURL == "" {
-		return errors.New("cover url is required")
+		return apierror.ValidationFailed
 	}
 
 	//事务保证视频写入库和消息写入本地消息表的一致性

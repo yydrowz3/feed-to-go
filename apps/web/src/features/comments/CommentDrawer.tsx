@@ -1,8 +1,9 @@
+import { useAppTranslation } from "../../i18n/react";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Trash2, RefreshCw, Send } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "../../i18n/toast";
 import { NativeDialog } from "../../components/NativeDialog";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { FormField } from "../../components/FormField";
@@ -26,21 +27,28 @@ export function CommentDrawer({
   open: boolean;
   onClose: () => void;
 }) {
+  const { t } = useAppTranslation();
   const auth = useAuth();
   const valid = videoId !== null && Number.isSafeInteger(videoId) && videoId > 0;
   return (
-    <NativeDialog open={open && valid} title={`评论 · ${title}`} onClose={onClose} drawer>
+    <NativeDialog
+      open={open && valid}
+      title={t("comments.heading", { p0: title || t("video.untitled") })}
+      onClose={onClose}
+      drawer
+    >
       {open && valid && <CommentContent key={`${auth.sessionId}:${videoId}`} videoId={videoId} />}
     </NativeDialog>
   );
 }
 function CommentContent({ videoId }: { videoId: number }) {
+  const { number, date, t, message: displayMessage } = useAppTranslation();
   const runtime = useRuntime();
   const auth = useAuth();
   const needLogin = useRequireLogin();
   const lifetime = useRef<AbortController | null>(null);
   const input = useRef<HTMLTextAreaElement>(null);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<unknown>(null);
   const [confirm, setConfirm] = useState<Comment | null>(null);
   useEffect(() => {
     const controller = new AbortController();
@@ -61,16 +69,15 @@ function CommentContent({ videoId }: { videoId: number }) {
     onSubmit: async ({ value }) => {
       if (needLogin()) return;
       const signal = lifetime.current!.signal;
-      setError("");
+      setError(null);
       try {
         const applied = await publishComment(runtime, videoId, value.content, signal);
         if (applied && current(signal)) {
           form.reset();
-          toast.success("评论已提交");
+          toast.success("comments.submitted");
         }
       } catch (cause) {
-        if (current(signal) && !isCancellation(cause))
-          setError(cause instanceof Error ? cause.message : "评论提交失败");
+        if (current(signal) && !isCancellation(cause)) setError(cause);
       }
     },
   });
@@ -81,18 +88,22 @@ function CommentContent({ videoId }: { videoId: number }) {
         const applied = await deleteComment(runtime, videoId, comment, signal);
         if (applied && current(signal)) {
           setConfirm(null);
-          toast.success("评论已删除");
+          toast.success("comments.deleted");
         }
       } catch (cause) {
-        if (current(signal) && !isCancellation(cause))
-          toast.error(cause instanceof Error ? cause.message : "删除失败");
+        if (current(signal) && !isCancellation(cause)) toast.error(cause);
       }
     },
   });
   return (
     <>
       <div className="flex items-center justify-between gap-3">
-        <span className="text-sm text-base-content/60">{query.data?.length ?? 0} 条评论</span>
+        <span className="text-sm text-base-content/60">
+          {t("comments.count", {
+            count: query.data?.length ?? 0,
+            formatted: number(query.data?.length ?? 0),
+          })}
+        </span>
         <button
           type="button"
           className="btn btn-ghost btn-sm"
@@ -100,29 +111,30 @@ function CommentContent({ videoId }: { videoId: number }) {
           onClick={() => void query.refetch()}
         >
           <RefreshCw size={14} />
-          刷新
+          {t("common.refresh")}
         </button>
       </div>
       <div className="min-h-24 flex-1 space-y-4 overflow-y-auto" aria-live="polite">
         {query.isPending && <LoadingState />}
         {query.isError && (
           <p role="alert" className="text-error">
-            {query.error.message}，请刷新重试。
+            {displayMessage(query.error)}
+            {t("comments.refreshHelp")}
           </p>
         )}
         {query.data?.length === 0 && (
-          <p className="py-8 text-center text-base-content/60">还没有评论，来聊聊吧。</p>
+          <p className="py-8 text-center text-base-content/60">{t("comments.empty")}</p>
         )}
         {query.data?.map((comment) => (
           <article key={comment.id} className="flex gap-3 border-b border-base-content/10 pb-4">
-            <UserAvatar username={comment.username} size="sm" />
+            <UserAvatar username={comment.username || t("common.anonymous")} size="sm" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
-                <span className="font-semibold">{comment.username}</span>
+                <span className="font-semibold">{comment.username || t("common.anonymous")}</span>
                 {auth.accountId === comment.author_id && (
                   <button
                     type="button"
-                    aria-label={`删除评论 ${comment.id}`}
+                    aria-label={t("comments.deleteLabel", { p0: comment.id })}
                     className="btn btn-circle btn-ghost btn-xs text-error"
                     disabled={removal.isPending}
                     onClick={() => setConfirm(comment)}
@@ -136,13 +148,13 @@ function CommentContent({ videoId }: { videoId: number }) {
                 dateTime={comment.created_at}
                 className="mt-2 block text-xs text-base-content/50"
               >
-                {new Date(comment.created_at).toLocaleString()}
+                {date(comment.created_at)}
               </time>
             </div>
           </article>
         ))}
       </div>
-      <p className="text-xs text-base-content/50">提交后列表可能稍后更新，可点击刷新查看。</p>
+      <p className="text-xs text-base-content/50">{t("comments.updateHelp")}</p>
       <form
         className="grid gap-3"
         onSubmit={(event) => {
@@ -153,13 +165,17 @@ function CommentContent({ videoId }: { videoId: number }) {
       >
         <form.Field name="content">
           {(field) => (
-            <FormField id="comment-content" label="写评论" errors={field.state.meta.errors}>
+            <FormField
+              id="comment-content"
+              label={t("comments.write")}
+              errors={field.state.meta.errors}
+            >
               <textarea
                 id="comment-content"
                 ref={input}
                 className="textarea w-full"
                 rows={3}
-                placeholder="说点什么…"
+                placeholder={t("comments.placeholder")}
                 value={field.state.value}
                 onChange={(event) => field.handleChange(event.target.value)}
                 onBlur={field.handleBlur}
@@ -171,9 +187,9 @@ function CommentContent({ videoId }: { videoId: number }) {
             </FormField>
           )}
         </form.Field>
-        {error && (
+        {!!error && (
           <p role="alert" className="text-sm text-error">
-            {error}
+            {displayMessage(error)}
           </p>
         )}
         <form.Subscribe selector={(state) => state.isSubmitting}>
@@ -187,15 +203,19 @@ function CommentContent({ videoId }: { videoId: number }) {
               }}
             >
               <Send size={16} />
-              {busy ? "提交中…" : auth.accessToken ? "发送评论" : "登录后评论"}
+              {busy
+                ? t("common.submitting")
+                : auth.accessToken
+                  ? t("comments.send")
+                  : t("comments.signIn")}
             </button>
           )}
         </form.Subscribe>
       </form>
       <ConfirmDialog
         open={!!confirm}
-        title="删除评论"
-        description="确认删除这条评论？"
+        title={t("comments.delete")}
+        description={t("comments.confirmDelete")}
         busy={removal.isPending}
         onClose={() => setConfirm(null)}
         onConfirm={() => {

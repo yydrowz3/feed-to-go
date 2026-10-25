@@ -2,7 +2,7 @@ package message
 
 import (
 	"context"
-	"errors"
+	"feed-to-go/pkg/apierror"
 	"strings"
 	"time"
 
@@ -20,7 +20,7 @@ func (r *Repository) AutoMigrate(ctx context.Context) error {
 func (r *Repository) Send(ctx context.Context, m *Message) error {
 	m.Content = strings.TrimSpace(m.Content)
 	if m.Content == "" {
-		return errors.New("content is required")
+		return apierror.ValidationFailed
 	}
 	m.CreatedAt = time.Now()
 	return r.db.WithContext(ctx).Create(m).Error

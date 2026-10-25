@@ -5,6 +5,7 @@ import (
 	"errors"
 	"feed-to-go/internal/services/video"
 	"feed-to-go/internal/util"
+	"feed-to-go/pkg/apierror"
 	"feed-to-go/pkg/cache"
 	"feed-to-go/pkg/mq"
 	"time"
@@ -26,10 +27,10 @@ func NewLikeService(repo *LikeRepository, videoRepo *video.VideoRepository, cach
 
 func (s *LikeService) Like(ctx context.Context, like *Like) error {
 	if like == nil {
-		return errors.New("like is nil")
+		return apierror.ValidationFailed
 	}
 	if like.VideoID == 0 || like.AccountID == 0 {
-		return errors.New("video_id and account_id are required")
+		return apierror.ValidationFailed
 	}
 
 	if s.VideoRepo != nil {
@@ -38,7 +39,7 @@ func (s *LikeService) Like(ctx context.Context, like *Like) error {
 			return err
 		}
 		if !ok {
-			return errors.New("video not found")
+			return apierror.VideoNotFound
 		}
 	}
 
@@ -47,7 +48,7 @@ func (s *LikeService) Like(ctx context.Context, like *Like) error {
 		return err
 	}
 	if isLiked {
-		return errors.New("user has liked this video")
+		return apierror.AlreadyLiked
 	}
 
 	like.CreatedAt = time.Now()
@@ -74,13 +75,13 @@ func (s *LikeService) Like(ctx context.Context, like *Like) error {
 		err := s.repo.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 			if err := tx.Select("id").First(&video.Video{}, like.VideoID).Error; err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
-					return errors.New("video not found")
+					return apierror.VideoNotFound
 				}
 				return err
 			}
 			if err := tx.Create(like).Error; err != nil {
 				if isDupKey(err) {
-					return errors.New("user has liked this video")
+					return apierror.AlreadyLiked
 				}
 				return err
 			}
@@ -106,10 +107,10 @@ func (s *LikeService) Like(ctx context.Context, like *Like) error {
 
 func (s *LikeService) Unlike(ctx context.Context, like *Like) error {
 	if like == nil {
-		return errors.New("like is nil")
+		return apierror.ValidationFailed
 	}
 	if like.VideoID == 0 || like.AccountID == 0 {
-		return errors.New("video_id and account_id are required")
+		return apierror.ValidationFailed
 	}
 
 	if s.VideoRepo != nil {
@@ -118,7 +119,7 @@ func (s *LikeService) Unlike(ctx context.Context, like *Like) error {
 			return err
 		}
 		if !ok {
-			return errors.New("video not found")
+			return apierror.VideoNotFound
 		}
 	}
 
@@ -127,7 +128,7 @@ func (s *LikeService) Unlike(ctx context.Context, like *Like) error {
 		return err
 	}
 	if !isLiked {
-		return errors.New("user has not liked this video")
+		return apierror.NotLiked
 	}
 
 	likeEnqueued := false
@@ -154,7 +155,7 @@ func (s *LikeService) Unlike(ctx context.Context, like *Like) error {
 				return del.Error
 			}
 			if del.RowsAffected == 0 {
-				return errors.New("user has not liked this video")
+				return apierror.NotLiked
 			}
 
 			if err := tx.Model(&video.Video{}).Where("id = ?", like.VideoID).

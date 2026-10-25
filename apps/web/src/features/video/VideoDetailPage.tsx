@@ -1,3 +1,4 @@
+import { useAppTranslation } from "../../i18n/react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import { useAuth, useRuntime } from "../../lib/app-context";
@@ -16,6 +17,7 @@ export function VideoDetailPage() {
   return <VideoDetail key={id} id={parseResourceId(id)} />;
 }
 function VideoDetail({ id }: { id: number }) {
+  const { t } = useAppTranslation();
   const { services } = useRuntime();
   const auth = useAuth();
   const query = useQuery({
@@ -24,16 +26,16 @@ function VideoDetail({ id }: { id: number }) {
   });
   if (query.isPending) return <LoadingState />;
   if (query.isError && !query.data)
-    return <ErrorState message={query.error.message} retry={() => void query.refetch()} />;
+    return <ErrorState message={query.error} retry={() => void query.refetch()} />;
   return (
     query.data && (
       <>
         <DetailPlayer key={`${auth.sessionId}:${id}`} video={query.data} />
         {query.isError && (
           <p role="alert" className="absolute right-4 top-24 rounded-box bg-base-200 p-3">
-            详情刷新失败，已保留当前内容。
+            {t("errors.detailRetained")}
             <button className="btn btn-xs" onClick={() => void query.refetch()}>
-              重试
+              {t("common.retry")}
             </button>
           </p>
         )}
@@ -42,6 +44,7 @@ function VideoDetail({ id }: { id: number }) {
   );
 }
 function DetailPlayer({ video }: { video: Video }) {
+  const { t } = useAppTranslation();
   const [comments, setComments] = useState(false);
   const auth = useAuth();
   const liked = useLikedVideo(video.id);
@@ -66,15 +69,15 @@ function DetailPlayer({ video }: { video: Video }) {
       />
       <CommentDrawer
         videoId={video.id}
-        title={video.title}
+        title={video.title || t("video.untitled")}
         open={comments}
         onClose={() => setComments(false)}
       />
       {liked.isError && (
         <p role="alert" className="absolute right-4 top-24 rounded-box bg-base-200 p-3">
-          点赞状态加载失败{" "}
+          {t("errors.likeStatus")}{" "}
           <button className="btn btn-xs" onClick={() => void liked.refetch()}>
-            重试
+            {t("common.retry")}
           </button>
         </p>
       )}

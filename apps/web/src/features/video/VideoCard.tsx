@@ -1,3 +1,4 @@
+import { useAppTranslation } from "../../i18n/react";
 import { Link } from "@tanstack/react-router";
 import type { FeedVideoItem, Video } from "../../api/types";
 import { useRuntime } from "../../lib/app-context";
@@ -6,6 +7,7 @@ import { ShareButton } from "./ShareButton";
 import { LikeButton } from "./LikeButton";
 import { useLikedVideo } from "./queries";
 export function VideoCard({ item }: { item: FeedVideoItem | Video }) {
+  const { date: formatDate, t } = useAppTranslation();
   const { baseUrl } = useRuntime();
   const isFeed = "author" in item;
   const liked = useLikedVideo(item.id, !isFeed);
@@ -16,23 +18,23 @@ export function VideoCard({ item }: { item: FeedVideoItem | Video }) {
       <Link to="/video/$id" params={{ id: String(item.id) }} className="block shrink-0 sm:w-48">
         <img
           src={mediaUrl(item.cover_url, baseUrl) || undefined}
-          alt={item.title}
+          alt={item.title || t("video.untitled")}
           loading="lazy"
           className="aspect-video w-full object-cover sm:h-full"
         />
       </Link>
       <div className="card-body min-w-0 gap-3 p-4">
         <Link to="/video/$id" params={{ id: String(item.id) }} className="card-title break-words">
-          {item.title}
+          {item.title || t("video.untitled")}
         </Link>
         <Link to="/u/$id" params={{ id: String(author.id) }} className="link link-hover">
-          @{author.username}
+          @{author.username || t("common.anonymous")}
         </Link>
         <time
           dateTime={Number.isNaN(date.getTime()) ? undefined : date.toISOString()}
           className="text-xs text-base-content/60"
         >
-          {Number.isNaN(date.getTime()) ? "日期未知" : date.toLocaleString()}
+          {formatDate(date)}
         </time>
         <div className="card-actions items-center">
           <LikeButton
@@ -49,7 +51,7 @@ export function VideoCard({ item }: { item: FeedVideoItem | Video }) {
             className="btn btn-ghost btn-sm"
             onClick={() => void liked.refetch()}
           >
-            重试点赞状态
+            {t("video.retryLike")}
           </button>
         )}
       </div>

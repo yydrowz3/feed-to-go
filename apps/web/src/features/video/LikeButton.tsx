@@ -1,3 +1,4 @@
+import { useAppTranslation } from "../../i18n/react";
 import { Heart } from "lucide-react";
 import { useLikeAction } from "../social/use-social-actions";
 export function LikeButton({
@@ -11,18 +12,19 @@ export function LikeButton({
   count: number;
   ready?: boolean;
 }) {
+  const { t, number } = useAppTranslation();
   const action = useLikeAction(videoId, liked, ready);
   return (
     <button
       type="button"
       className={`btn btn-sm ${liked ? "btn-secondary" : ""}`}
       aria-pressed={liked}
-      aria-label={liked ? "取消点赞" : "点赞"}
+      aria-label={liked ? t("video.unlike") : t("video.like")}
       disabled={action.disabled}
       onClick={action.toggle}
     >
       <Heart size={16} fill={liked ? "currentColor" : "none"} />
-      {count}
+      {number(count)}
     </button>
   );
 }

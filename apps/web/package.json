@@ -1,9 +1,9 @@
 {
   "name": "feed-to-go-web",
   "description": "React frontend for Feed to Go, a short-video sharing application.",
-  "version": "0.1.12",
+  "version": "0.1.14",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "MIT",
   "author": {
     "name": "yydrowz3",
     "email": "yydrowz3@gmail.com"
@@ -38,7 +38,9 @@
     "preview": "vite preview",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
-    "version:bump": "pnpm version patch --no-git-tag-version --no-git-checks"
+    "version:bump": "pnpm version patch --no-git-tag-version --no-git-checks",
+    "errors:generate": "node ../../scripts/generate-error-codes.mjs",
+    "errors:check": "node ../../scripts/generate-error-codes.mjs --check"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
@@ -46,11 +48,11 @@
     "@tanstack/react-query": "^5.104.5",
     "@tanstack/react-router": "^1.170.45",
     "hash-wasm": "^4.12.0",
-    "i18next": "^26.5.6",
+    "i18next": "26.5.10",
     "lucide-react": "^1.61.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "react-i18next": "^17.1.4",
+    "react-i18next": "17.1.7",
     "sonner": "^2.0.8",
     "tailwindcss": "^4.3.3",
     "zod": "^4.6.7",

@@ -1,3 +1,4 @@
+import { useAppTranslation } from "../../i18n/react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth, useRuntime } from "../../lib/app-context";
 import { queryKeys } from "../../lib/query-keys";
@@ -7,6 +8,7 @@ import { ErrorState } from "../../components/ErrorState";
 import { EmptyState } from "../../components/EmptyState";
 
 export function VideoList({ authorId, liked = false }: { authorId: number; liked?: boolean }) {
+  const { t } = useAppTranslation();
   const { services } = useRuntime();
   const auth = useAuth();
   const query = useQuery({
@@ -21,11 +23,12 @@ export function VideoList({ authorId, liked = false }: { authorId: number; liked
   if (query.isError)
     return (
       <ErrorState
-        message={liked ? "喜欢列表加载失败" : "作品加载失败"}
+        message={liked ? t("errors.likedLoad") : t("errors.videosLoad")}
         retry={() => void query.refetch()}
       />
     );
-  if (!query.data.length) return <EmptyState title={liked ? "暂无喜欢的视频" : "暂无作品"} />;
+  if (!query.data.length)
+    return <EmptyState title={liked ? t("account.noLiked") : t("account.noVideos")} />;
   return (
     <div className="grid min-w-0 gap-4">
       {query.data.map((item) => (

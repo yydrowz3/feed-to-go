@@ -1,8 +1,9 @@
+import { useAppTranslation } from "../../i18n/react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useForm } from "@tanstack/react-form";
-import { toast } from "sonner";
+import { toast } from "../../i18n/toast";
 import { useAuth, useRuntime } from "../../lib/app-context";
 import { parseResourceId } from "../../lib/navigation";
 import { queryKeys } from "../../lib/query-keys";
@@ -16,18 +17,20 @@ import { FormField } from "../../components/FormField";
 import { messageSchema, orderMessages, sendMessage } from "./actions";
 
 export function ConversationPage() {
+  const { t } = useAppTranslation();
   const auth = useAuth();
   const { peerId } = useParams({ from: "/messages/$peerId" });
   const id = parseResourceId(peerId);
-  if (id === auth.accountId) return <ErrorState message="不能向自己发送私信" />;
+  if (id === auth.accountId) return <ErrorState message={t("errors.messageSelf")} />;
   return <Conversation key={`${auth.sessionId}:${id}`} peerId={id} />;
 }
 function Conversation({ peerId }: { peerId: number }) {
+  const { date, t, message: displayMessage } = useAppTranslation();
   const runtime = useRuntime();
   const auth = useAuth();
   const peer = useAccount(peerId);
   const getSignal = useActionScope();
-  const [error, setError] = useState("");
+  const [error, setError] = useState<unknown>(null);
   const [scrollRequest, setScrollRequest] = useState(0);
   const scroller = useRef<HTMLDivElement>(null);
   const messages = useQuery({
@@ -47,7 +50,7 @@ function Conversation({ peerId }: { peerId: number }) {
     defaultValues: { content: "" },
     validators: { onSubmit: messageSchema },
     onSubmit: async ({ value }) => {
-      setError("");
+      setError(null);
       try {
         const signal = getSignal();
         const applied = await sendMessage(runtime, peerId, value.content, signal);
@@ -57,8 +60,8 @@ function Conversation({ peerId }: { peerId: number }) {
         setScrollRequest((value) => value + 1);
       } catch (cause) {
         if (!isCancellation(cause)) {
-          setError("发送失败，草稿已保留。重试前可重新读取消息确认是否已送达。");
-          toast.error(cause instanceof Error ? cause.message : "发送失败");
+          setError("messages.draftRetained");
+          toast.error(cause);
         }
       }
     },
@@ -67,41 +70,47 @@ function Conversation({ peerId }: { peerId: number }) {
     <section className="mx-auto flex h-[calc(100dvh-10rem)] min-h-96 w-full max-w-3xl flex-col gap-3">
       <header className="flex flex-wrap items-center gap-3">
         <Link to="/messages" className="btn btn-sm">
-          返回联系人
+          {t("messages.backContacts")}
         </Link>
         <h1 className="min-w-0 break-words text-xl font-bold">
-          {peer.data?.username ?? `用户 ${peerId}`}
+          {peer.data?.username || t("account.userId", { p0: peerId })}
         </h1>
         <Link to="/u/$id" params={{ id: String(peerId) }} className="link ml-auto">
-          用户主页
+          {t("account.profile")}
         </Link>
       </header>
       {peer.isError && (
-        <ErrorState message="联系人资料加载失败" retry={() => void peer.refetch()} />
+        <ErrorState
+          message={peer.error}
+          fallback="errors.contactLoad"
+          retry={() => void peer.refetch()}
+        />
       )}
-      <p className="text-xs text-base-content/60">
-        显示最近 50 条历史消息。重新进入或点击重新读取可获取新消息。
-      </p>
+      <p className="text-xs text-base-content/60">{t("messages.historyHelp")}</p>
       <button
         type="button"
         className="btn btn-ghost btn-sm self-start"
         disabled={messages.isFetching}
         onClick={() => void messages.refetch()}
       >
-        重新读取消息
+        {t("messages.reload")}
       </button>
       <div
         ref={scroller}
         role="log"
-        aria-label="私信记录"
+        aria-label={t("messages.log")}
         className="min-h-0 flex-1 overflow-y-auto rounded-box bg-base-200 p-3"
       >
         {messages.isPending && <LoadingState />}
         {messages.isError && (
-          <ErrorState message="消息加载失败" retry={() => void messages.refetch()} />
+          <ErrorState
+            message={messages.error}
+            fallback="errors.messagesLoad"
+            retry={() => void messages.refetch()}
+          />
         )}
         {messages.isSuccess && !messages.data.messages.length && (
-          <EmptyState title="还没有消息">发送第一条消息开始聊天。</EmptyState>
+          <EmptyState title={t("messages.empty")}>{t("messages.start")}</EmptyState>
         )}
         {messages.data?.messages.map((message) => (
           <div
@@ -110,8 +119,8 @@ function Conversation({ peerId }: { peerId: number }) {
           >
             <div className="chat-header">
               {message.from_id === auth.accountId
-                ? "我"
-                : (peer.data?.username ?? `用户 ${peerId}`)}
+                ? t("messages.me")
+                : peer.data?.username || t("account.userId", { p0: peerId })}
             </div>
             <div
               className={`chat-bubble max-w-[90%] whitespace-pre-wrap break-all ${message.from_id === auth.accountId ? "chat-bubble-primary" : ""}`}
@@ -119,7 +128,7 @@ function Conversation({ peerId }: { peerId: number }) {
               {message.content}
             </div>
             <time className="chat-footer text-xs" dateTime={message.created_at}>
-              {new Date(message.created_at).toLocaleString()}
+              {date(message.created_at)}
             </time>
           </div>
         ))}
@@ -137,7 +146,11 @@ function Conversation({ peerId }: { peerId: number }) {
             <fieldset disabled={busy || messages.isPending} className="grid gap-2">
               <form.Field name="content">
                 {(field) => (
-                  <FormField id="message-content" label="消息" errors={field.state.meta.errors}>
+                  <FormField
+                    id="message-content"
+                    label={t("messages.message")}
+                    errors={field.state.meta.errors}
+                  >
                     <textarea
                       id="message-content"
                       className="textarea max-h-32 min-h-20 w-full"
@@ -162,14 +175,19 @@ function Conversation({ peerId }: { peerId: number }) {
                   </FormField>
                 )}
               </form.Field>
-              {error && (
+              {!!error && (
                 <p role="alert" className="text-sm text-error">
-                  {error}
+                  {displayMessage(error)}
                 </p>
               )}
-              <p className="text-xs text-base-content/60">Enter 换行，Ctrl / ⌘ + Enter 发送</p>
-              <button type="submit" className="btn btn-primary justify-self-end" disabled={busy}>
-                {busy ? "发送中…" : "发送"}
+              <p className="text-xs text-base-content/60">{t("messages.keyboardHelp")}</p>
+              <button
+                type="submit"
+                data-testid="form-submit"
+                className="btn btn-primary justify-self-end"
+                disabled={busy}
+              >
+                {busy ? t("messages.sending") : t("messages.send")}
               </button>
             </fieldset>
           )}

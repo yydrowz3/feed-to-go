@@ -1,3 +1,4 @@
+import { useAppTranslation } from "../../i18n/react";
 import { useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
@@ -19,26 +20,41 @@ export function AccountForm({
   submitLabel: string;
   onSubmit: (values: Record<string, string>) => Promise<void>;
 }) {
-  const [error, setError] = useState("");
+  const { t, message: displayMessage } = useAppTranslation();
+  const [error, setError] = useState<unknown>(null);
   const form = useForm({
     defaultValues: Object.fromEntries(fields.map((field) => [field.name, field.initial ?? ""])),
     validators: {
       onSubmit: z.object(
         Object.fromEntries(
-          fields.map((field) => [field.name, z.string().trim().min(1, `请输入${field.label}`)]),
+          fields.map((field) => [
+            field.name,
+            z
+              .string()
+              .trim()
+              .min(
+                1,
+                field.name === "old_password"
+                  ? "validation.oldPassword"
+                  : field.name === "new_password"
+                    ? "validation.newPassword"
+                    : field.name === "username"
+                      ? "validation.username"
+                      : "validation.password",
+              ),
+          ]),
         ),
       ),
     },
     onSubmit: async ({ value }) => {
-      setError("");
+      setError(null);
       try {
         await onSubmit(value);
         fields
           .filter((field) => field.password)
           .forEach((field) => form.setFieldValue(field.name, ""));
       } catch (cause) {
-        if (!isCancellation(cause))
-          setError(cause instanceof Error ? cause.message : "操作失败，请重试");
+        if (!isCancellation(cause)) setError(cause);
       }
     },
   });
@@ -80,13 +96,18 @@ export function AccountForm({
                 )}
               </form.Field>
             ))}
-            {error && (
+            {!!error && (
               <p role="alert" className="text-error">
-                {error}
+                {displayMessage(error)}
               </p>
             )}
-            <button className="btn btn-primary" type="submit" disabled={busy}>
-              {busy ? "提交中…" : submitLabel}
+            <button
+              className="btn btn-primary"
+              type="submit"
+              data-testid="form-submit"
+              disabled={busy}
+            >
+              {busy ? t("common.submitting") : submitLabel}
             </button>
           </fieldset>
         )}

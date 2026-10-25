@@ -318,7 +318,7 @@ func TestHashMismatch(t *testing.T) {
 		t.Fatalf("expected 400 for hash mismatch, got %d", rec.Code)
 	}
 	resp := parseJSON(t, rec)
-	if resp["error"] != "chunk hash mismatch" {
+	if resp["code"] != "UPLOAD_HASH_MISMATCH" {
 		t.Fatalf("unexpected error: %v", resp["error"])
 	}
 	if resp["expected"] == nil || resp["actual"] == nil {
@@ -350,11 +350,11 @@ func TestIncompleteMerge(t *testing.T) {
 
 	c, rec := newJSONContext(t, "/video/chunk/complete", CompleteChunkUploadRequest{UploadID: uploadID})
 	h.CompleteChunkUpload(c)
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400 for incomplete, got %d", rec.Code)
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("expected 409 for incomplete, got %d", rec.Code)
 	}
 	resp := parseJSON(t, rec)
-	if resp["error"] != "not all chunks uploaded" {
+	if resp["code"] != "UPLOAD_INCOMPLETE" {
 		t.Fatalf("unexpected error: %v", resp["error"])
 	}
 	if int(resp["missing"].(float64)) != 2 {

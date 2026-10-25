@@ -4,7 +4,7 @@ import (
 	"feed-to-go/internal/auth"
 	"feed-to-go/internal/services/account"
 	"feed-to-go/internal/services/video"
-	"feed-to-go/internal/util"
+	"feed-to-go/pkg/apierror"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -21,16 +21,16 @@ func NewSocialHandler(service *SocialService) *SocialHandler {
 func (h *SocialHandler) Follow(c *gin.Context) {
 	var req FollowRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.Write(c, apierror.ValidationFailed)
 		return
 	}
 	if req.FollowingID <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "following_id is required"})
+		apierror.Write(c, apierror.ValidationFailed)
 		return
 	}
 	FollowerID, err := auth.GetAccountID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		apierror.Write(c, apierror.AuthRequired)
 		return
 	}
 
@@ -39,7 +39,7 @@ func (h *SocialHandler) Follow(c *gin.Context) {
 		FollowingID: req.FollowingID,
 	}
 	if err := h.service.Follow(c.Request.Context(), social); err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.From(c, err, apierror.AccountNotFound)
 		return
 	}
 
@@ -49,17 +49,17 @@ func (h *SocialHandler) Follow(c *gin.Context) {
 func (h *SocialHandler) Unfollow(c *gin.Context) {
 	var req UnfollowRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.Write(c, apierror.ValidationFailed)
 		return
 	}
 
 	if req.FollowingID <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "following_id is required"})
+		apierror.Write(c, apierror.ValidationFailed)
 		return
 	}
 	FollowerID, err := auth.GetAccountID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		apierror.Write(c, apierror.AuthRequired)
 		return
 	}
 	social := &Social{
@@ -67,7 +67,7 @@ func (h *SocialHandler) Unfollow(c *gin.Context) {
 		FollowingID: req.FollowingID,
 	}
 	if err := h.service.Unfollow(c.Request.Context(), social); err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.From(c, err, apierror.AccountNotFound)
 		return
 	}
 
@@ -77,7 +77,7 @@ func (h *SocialHandler) Unfollow(c *gin.Context) {
 func (h *SocialHandler) GetAllFollowers(c *gin.Context) {
 	var req GetAllFollowersRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.Write(c, apierror.ValidationFailed)
 		return
 	}
 
@@ -85,14 +85,14 @@ func (h *SocialHandler) GetAllFollowers(c *gin.Context) {
 	if FollowingID == 0 {
 		accountID, err := auth.GetAccountID(c)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			apierror.Write(c, apierror.AuthRequired)
 			return
 		}
 		FollowingID = accountID
 	}
 	followers, err := h.service.GetAllFollowers(c.Request.Context(), FollowingID)
 	if err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.From(c, err, apierror.AccountNotFound)
 		return
 	}
 
@@ -108,14 +108,14 @@ func (h *SocialHandler) GetAllFollowers(c *gin.Context) {
 func (h *SocialHandler) GetAllFollowings(c *gin.Context) {
 	var req GetAllFollowingsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.Write(c, apierror.ValidationFailed)
 		return
 	}
 	followerID := req.FollowerID
 	if followerID == 0 {
 		accountID, err := auth.GetAccountID(c)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			apierror.Write(c, apierror.AuthRequired)
 			return
 		}
 		followerID = accountID
@@ -123,7 +123,7 @@ func (h *SocialHandler) GetAllFollowings(c *gin.Context) {
 
 	followings, err := h.service.GetAllFollowings(c.Request.Context(), followerID)
 	if err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.From(c, err, apierror.AccountNotFound)
 		return
 	}
 	if followings == nil {
@@ -151,16 +151,16 @@ func (h *SocialHandler) GetProfile(accountService *account.AccountService, video
 	return func(c *gin.Context) {
 		var req account.GetProfileRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			apierror.Write(c, apierror.ValidationFailed)
 			return
 		}
 		if req.AccountID == 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "account_id is required"})
+			apierror.Write(c, apierror.ValidationFailed)
 			return
 		}
 		acc, err := accountService.FindByID(c.Request.Context(), req.AccountID)
 		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
+			apierror.From(c, err, apierror.AccountNotFound)
 			return
 		}
 

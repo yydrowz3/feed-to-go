@@ -40,7 +40,7 @@ test("initialization restores unique valid chunks and counts the short last chun
       signal: new AbortController().signal,
       fileHash: "hash",
     }),
-    /标识/,
+    { name: 'AppError', key: 'errors.uploadIdMissing' },
   );
 });
 
@@ -219,11 +219,11 @@ test("completion always checks status, repairs at most once and never merges inc
   await uploadVideoChunked(file, repaired);
   assert.deepEqual(repaired.calls, ["init", 0, "status", 0, "status", "complete"]);
   const missing = uploadFixture([[], []]);
-  await assert.rejects(uploadVideoChunked(file, missing), /未确认/);
+  await assert.rejects(uploadVideoChunked(file, missing), { name: 'AppError', key: 'errors.chunksUnconfirmed' });
   assert.equal(missing.calls.includes("complete"), false);
   const mismatch = uploadFixture();
   mismatch.api.chunkStatus = async () => ({ total_chunks: 3, uploaded_chunks: [0] });
-  await assert.rejects(uploadVideoChunked(file, mismatch), /数量/);
+  await assert.rejects(uploadVideoChunked(file, mismatch), { name: "AppError", key: "errors.chunkCountMismatch" });
 });
 test("complete never retries and missing or unsafe URLs cannot reach publication", async () => {
   const fixture = uploadFixture();
@@ -232,14 +232,14 @@ test("complete never retries and missing or unsafe URLs cannot reach publication
     completes++;
     throw new TypeError("lost response");
   };
-  await assert.rejects(uploadVideoChunked(new File(["x"], "x.mp4"), fixture), /暂时无法确认/);
+  await assert.rejects(uploadVideoChunked(new File(["x"], "x.mp4"), fixture), { name: 'AppError', key: 'errors.mergeUncertain' });
   assert.equal(completes, 1);
   for (const url of ["", "javascript:x", "//evil.test/x", "bad"])
     assert.throws(() => uploadUrl({ url }, "video"));
   assert.equal(uploadUrl({ play_url: "/static/x.mp4" }, "video"), "/static/x.mp4");
   const invalid = uploadFixture();
   invalid.api.completeChunkUpload = async () => ({});
-  await assert.rejects(uploadVideoChunked(new File(["x"], "x.mp4"), invalid), /媒体地址/);
+  await assert.rejects(uploadVideoChunked(new File(["x"], "x.mp4"), invalid), { name: 'AppError', key: 'errors.uploadMediaMissing' });
 });
 
 import { publishVideo, reconcileFiles } from "../src/features/publish/publish-video.ts";
@@ -300,8 +300,8 @@ test("lost publish response cannot be automatically or manually resubmitted with
     f.counts.publish++;
     throw new TypeError("network");
   };
-  await assert.rejects(publishVideo(f.draft, f.checkpoints, f), /先查看我的作品/);
-  await assert.rejects(publishVideo(f.draft, f.checkpoints, f), /先查看我的作品/);
+  await assert.rejects(publishVideo(f.draft, f.checkpoints, f), { name: 'AppError', key: 'errors.publishUncertain' });
+  await assert.rejects(publishVideo(f.draft, f.checkpoints, f), { name: 'AppError', key: 'errors.publishUncertain' });
   assert.equal(f.counts.publish, 1);
 });
 

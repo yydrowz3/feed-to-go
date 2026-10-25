@@ -1,3 +1,4 @@
+import { AppError } from "../../i18n/app-error.ts";
 import { z } from "zod";
 import type { DirectMessage, ListMessagesResponse } from "../../api/types.ts";
 import type { AppRuntime } from "../../lib/runtime.ts";
@@ -5,10 +6,10 @@ import { queryKeys } from "../../lib/query-keys.ts";
 import { parseResourceId } from "../../lib/navigation.ts";
 import { createActionGate } from "../../lib/action-gate.ts";
 
-export const messageSchema = z.object({ content: z.string().trim().min(1, "请输入消息内容") });
+export const messageSchema = z.object({ content: z.string().trim().min(1, "validation.message") });
 export function validatePeer(peerId: number, viewerId: number) {
   parseResourceId(String(peerId));
-  if (peerId === viewerId) throw new Error("不能向自己发送私信");
+  if (peerId === viewerId) throw new AppError("errors.messageSelf");
   return peerId;
 }
 export function orderMessages(messages: DirectMessage[]) {
@@ -25,7 +26,7 @@ export async function sendMessage(
 ) {
   const viewer = runtime.authStore.getState();
   validatePeer(peerId, viewer.accountId);
-  if (!viewer.accessToken) throw new Error("请先登录");
+  if (!viewer.accessToken) throw new AppError("account.signInRequired");
   const value = messageSchema.parse({ content });
   let gate = gates.get(runtime);
   if (!gate) {

@@ -1,3 +1,4 @@
+import { useAppTranslation } from "../../i18n/react";
 import { useEffect, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { FormField } from "../../components/FormField";
@@ -8,6 +9,7 @@ import { Link } from "@tanstack/react-router";
 import { useAuth } from "../../lib/app-context";
 
 function FilePreview({ file, kind }: { file: File; kind: "video" | "cover" }) {
+  const { number, t } = useAppTranslation();
   const [url, setUrl] = useState("");
   const [failedUrl, setFailedUrl] = useState("");
   useEffect(() => {
@@ -20,7 +22,9 @@ function FilePreview({ file, kind }: { file: File; kind: "video" | "cover" }) {
   return (
     <div className="grid gap-2">
       <p className="break-all text-sm">
-        {file.name} · {(file.size / 1024 / 1024).toFixed(2)} MiB
+        {file.name} ·{" "}
+        {number(file.size / 1024 / 1024, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
+        MiB
       </p>
       {url &&
         (kind === "video" ? (
@@ -35,14 +39,14 @@ function FilePreview({ file, kind }: { file: File; kind: "video" | "cover" }) {
           <img
             key={url}
             src={url}
-            alt="封面预览"
+            alt={t("publish.coverPreview")}
             className="max-h-64 max-w-full rounded-box object-contain"
             onError={(event) => setFailedUrl(event.currentTarget.src)}
           />
         ))}
       {url && failedUrl === url && (
         <p role="alert" className="text-warning">
-          无法预览，请更换文件
+          {t("publish.previewFailed")}
         </p>
       )}
     </div>
@@ -54,6 +58,7 @@ export function PublishPage() {
   return <PublishContent key={auth.sessionId} />;
 }
 function PublishContent() {
+  const { number, t, message: displayMessage } = useAppTranslation();
   const upload = usePublishVideo();
   const form = useForm({
     defaultValues: { title: "", description: "", video: null, cover: null } as PublishDraft,
@@ -69,8 +74,8 @@ function PublishContent() {
   return (
     <section className="card mx-auto max-w-3xl bg-base-200">
       <div className="card-body gap-6">
-        <h1 className="text-2xl font-bold">发布视频</h1>
-        <p className="text-base-content/60">选择 MP4 视频（最多 200 MiB）与封面（最多 10 MiB）。</p>
+        <h1 className="text-2xl font-bold">{t("publish.heading")}</h1>
+        <p className="text-base-content/60">{t("publish.fileHelp")}</p>
         <form
           className="grid gap-5"
           onSubmit={(event) => {
@@ -88,7 +93,7 @@ function PublishContent() {
                     {(field) => (
                       <FormField
                         id={`publish-${name}`}
-                        label={name === "title" ? "标题" : "描述（可选）"}
+                        label={name === "title" ? t("publish.title") : t("publish.description")}
                         errors={field.state.meta.errors}
                       >
                         <textarea
@@ -109,7 +114,7 @@ function PublishContent() {
                     {(field) => (
                       <FormField
                         id={`publish-${name}`}
-                        label={name === "video" ? "视频" : "封面"}
+                        label={name === "video" ? t("publish.video") : t("publish.cover")}
                         errors={field.state.meta.errors}
                       >
                         <input
@@ -141,7 +146,7 @@ function PublishContent() {
                                 input.value = "";
                               }}
                             >
-                              清除{name === "video" ? "视频" : "封面"}
+                              {t(name === "video" ? "publish.clearVideo" : "publish.clearCover")}
                             </button>
                           </>
                         )}
@@ -149,17 +154,17 @@ function PublishContent() {
                     )}
                   </form.Field>
                 ))}
-                <button className="btn btn-primary" type="submit">
+                <button className="btn btn-primary" type="submit" data-testid="form-submit">
                   {upload.stage === "failed" || upload.stage === "cancelled"
-                    ? "重试发布"
-                    : "发布视频"}
+                    ? t("publish.retry")
+                    : t("publish.heading")}
                 </button>
               </fieldset>
             )}
           </form.Subscribe>
-          <p role="status">{stageLabels[upload.stage]}</p>
+          <p role="status">{t(stageLabels[upload.stage])}</p>
           <label className="grid gap-1">
-            文件校验进度
+            {t("publish.hashProgress")}
             <progress
               className="progress progress-primary w-full"
               value={upload.hashProgress}
@@ -167,34 +172,39 @@ function PublishContent() {
             />
           </label>
           <label className="grid gap-1">
-            已确认上传字节：{upload.uploadProgress} / {upload.totalBytes}
+            {t("publish.uploadedBytes", {
+              uploaded: number(upload.uploadProgress),
+              total: number(upload.totalBytes),
+            })}
             <progress
               className="progress progress-primary w-full"
               value={upload.uploadProgress}
               max={upload.totalBytes || 1}
             />
           </label>
-          {upload.error && (
+          {!!upload.error && (
             <p role="alert" className="text-error">
-              {upload.error}
+              {displayMessage(upload.error)}
             </p>
           )}
-          {upload.error && (
+          {!!upload.error && (
             <Link to="/account" className="link">
-              查看我的作品
+              {t("publish.myVideos")}
             </Link>
           )}
           {upload.result && (
             <div className="alert alert-success flex-wrap">
-              <span className="break-all">已发布：{upload.result.title}</span>
+              <span className="break-all">
+                {t("publish.publishedTitle", { title: upload.result.title })}
+              </span>
               <Link to="/video/$id" params={{ id: String(upload.result.id) }} className="link">
-                查看视频
+                {t("publish.viewVideo")}
               </Link>
             </div>
           )}
           {upload.busy && (
             <button type="button" className="btn" onClick={upload.cancel}>
-              取消上传
+              {t("publish.cancel")}
             </button>
           )}
         </form>

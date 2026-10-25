@@ -1,3 +1,4 @@
+import { AppError } from "../../i18n/app-error.ts";
 import type {
   FeedVideoItem,
   LatestInput,
@@ -13,7 +14,7 @@ export type FeedCursor = LatestInput | LikesCountInput | PopularityInput;
 export type FeedPageData = ListLatestResponse | ListLikesCountResponse | ListByPopularityResponse;
 export function initialCursor(kind: FeedKind, limit = 10): FeedCursor {
   if (!Number.isInteger(limit) || limit < 1 || limit > 50)
-    throw new Error("每页数量须为 1～50 的整数");
+    throw new AppError("validation.pageSize");
   if (kind === "popularity") return { limit, as_of: 0, offset: 0 };
   if (kind === "likesCount") return { limit };
   return { limit, latest_time: 0 };

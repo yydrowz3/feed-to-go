@@ -1,3 +1,4 @@
+import { AppError } from "../../i18n/app-error.ts";
 import type { Video } from "../../api/types.ts";
 import { retryable, uploadUrl, uploadVideoChunked, type UploadOptions } from "./upload-video.ts";
 import type { PublishDraft } from "./validation.ts";
@@ -28,9 +29,8 @@ export async function publishVideo(
   const { signal, api, onStage } = options;
   reconcileFiles(checkpoints, draft.video, draft.cover);
   signal.throwIfAborted();
-  if (!draft.video || !draft.cover) throw Error("请选择视频和封面");
-  if (checkpoints.uncertain)
-    throw Error("发布结果暂时无法确认，请先查看我的作品；确认未发布后重新选择视频");
+  if (!draft.video || !draft.cover) throw new AppError("validation.filesRequired");
+  if (checkpoints.uncertain) throw new AppError("errors.publishUncertain");
   if (!checkpoints.videoUrl)
     checkpoints.videoUrl = uploadUrl(await uploadVideoChunked(draft.video, options), "video");
   signal.throwIfAborted();
@@ -53,13 +53,14 @@ export async function publishVideo(
       signal,
     );
     signal.throwIfAborted();
-    if (!Number.isSafeInteger(result?.id) || result.id <= 0) throw new TypeError("发布响应无效");
+    if (!Number.isSafeInteger(result?.id) || result.id <= 0)
+      throw new AppError("errors.invalidPublishResponse");
     return result;
   } catch (error) {
     // An aborted request may still have committed on the server.
     if (retryable(error) || signal.aborted) {
       checkpoints.uncertain = true;
-      throw Error("发布结果暂时无法确认，请先查看我的作品；确认未发布后重新选择视频");
+      throw new AppError("errors.publishUncertain", undefined, error);
     }
     throw error;
   }

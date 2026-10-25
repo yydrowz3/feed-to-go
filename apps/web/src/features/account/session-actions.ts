@@ -1,11 +1,12 @@
+import { AppError } from "../../i18n/app-error.ts";
 import { z } from "zod";
 import type { AppRuntime } from "../../lib/runtime.ts";
 import { safeRedirect } from "../../lib/navigation.ts";
 import { inViewer } from "../video/cache.ts";
 
 export const loginSchema = z.object({
-  username: z.string().trim().min(1, "请输入用户名"),
-  password: z.string().trim().min(1, "请输入密码"),
+  username: z.string().trim().min(1, "validation.username"),
+  password: z.string().trim().min(1, "validation.password"),
 });
 
 export async function registerAccount(runtime: AppRuntime, input: unknown, signal?: AbortSignal) {
@@ -14,9 +15,9 @@ export async function registerAccount(runtime: AppRuntime, input: unknown, signa
 }
 
 export const changePasswordSchema = z.object({
-  username: z.string().trim().min(1, "请输入用户名"),
-  old_password: z.string().trim().min(1, "请输入旧密码"),
-  new_password: z.string().trim().min(1, "请输入新密码"),
+  username: z.string().trim().min(1, "validation.username"),
+  old_password: z.string().trim().min(1, "validation.oldPassword"),
+  new_password: z.string().trim().min(1, "validation.newPassword"),
 });
 
 export async function changePassword(runtime: AppRuntime, input: unknown, signal?: AbortSignal) {
@@ -30,7 +31,8 @@ export async function changePassword(runtime: AppRuntime, input: unknown, signal
   );
   signal?.throwIfAborted();
   const current = runtime.authStore.getState();
-  if (current.sessionId !== snapshot.sessionId) throw new DOMException("会话已变更", "AbortError");
+  if (current.sessionId !== snapshot.sessionId)
+    throw new DOMException("errors.sessionChange", "AbortError");
   if (
     snapshot.accessToken &&
     value.username === snapshot.username &&
@@ -40,12 +42,13 @@ export async function changePassword(runtime: AppRuntime, input: unknown, signal
 }
 
 export async function renameAccount(runtime: AppRuntime, input: string, signal?: AbortSignal) {
-  const username = z.string().trim().min(1, "请输入新用户名").parse(input);
+  const username = z.string().trim().min(1, "validation.newUsername").parse(input);
   const snapshot = runtime.authStore.getState();
   const result = await runtime.services.account.rename(username, signal);
   signal?.throwIfAborted();
   const current = runtime.authStore.getState();
-  if (current.sessionId !== snapshot.sessionId) throw new DOMException("会话已变更", "AbortError");
+  if (current.sessionId !== snapshot.sessionId)
+    throw new DOMException("errors.sessionChange", "AbortError");
   // A 401 replay can rotate the token while this rename is in flight. Compare
   // identity changes as well so that refresh does not discard a successful rename.
   if (
@@ -53,7 +56,7 @@ export async function renameAccount(runtime: AppRuntime, input: string, signal?:
     current.username !== snapshot.username &&
     current.username !== username
   )
-    throw new Error("登录凭据已更新，请重新提交改名");
+    throw new AppError("errors.renameCredentialsChanged");
   // A refresh that already observed the new name owns the newer credential.
   if (current.accessToken === snapshot.accessToken || current.username !== username)
     current.updateTokens(snapshot.sessionId, current.accessToken, result.token);
@@ -63,7 +66,7 @@ export async function renameAccount(runtime: AppRuntime, input: string, signal?:
     await runtime.queryClient.invalidateQueries({ predicate });
   signal?.throwIfAborted();
   if (runtime.authStore.getState().sessionId !== snapshot.sessionId)
-    throw new DOMException("会话已变更", "AbortError");
+    throw new DOMException("errors.sessionChange", "AbortError");
 }
 
 export async function loginSession(
@@ -85,7 +88,7 @@ export async function loginSession(
     );
     combinedSignal.throwIfAborted();
     if (runtime.authStore.getState().sessionId !== sessionId)
-      throw new DOMException("会话已变更", "AbortError");
+      throw new DOMException("errors.sessionChange", "AbortError");
     runtime.authStore.getState().replaceSession(result.token, result.refresh_token ?? "");
     return safeRedirect(redirect);
   } finally {

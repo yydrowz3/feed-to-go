@@ -3,6 +3,7 @@ package feed
 import (
 	"feed-to-go/internal/auth"
 	"feed-to-go/internal/util"
+	"feed-to-go/pkg/apierror"
 	"net/http"
 	"time"
 
@@ -20,7 +21,7 @@ func NewFeedHandler(service *FeedService) *FeedHandler {
 func (f *FeedHandler) ListLatest(c *gin.Context) {
 	var req ListLatestRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.Write(c, apierror.ValidationFailed)
 		return
 	}
 	if req.Limit <= 0 || req.Limit > 50 {
@@ -36,7 +37,7 @@ func (f *FeedHandler) ListLatest(c *gin.Context) {
 	}
 	feedItems, err := f.service.ListLatest(c.Request.Context(), req.Limit, latestTime, viewerAccountID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierror.From(c, err, apierror.VideoNotFound)
 		return
 	}
 	feedItems.VideoList = nonNilFeedVideoItems(feedItems.VideoList)
@@ -48,7 +49,7 @@ func (f *FeedHandler) ListLatest(c *gin.Context) {
 func (f *FeedHandler) ListLikesCount(c *gin.Context) {
 	var req ListLikesCountRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.Write(c, apierror.ValidationFailed)
 		return
 	}
 	if req.Limit <= 0 || req.Limit > 50 {
@@ -59,19 +60,19 @@ func (f *FeedHandler) ListLikesCount(c *gin.Context) {
 	var cursor *LikesCountCursor
 	if req.LikesCountBefore != nil || req.IDBefore != nil {
 		if req.LikesCountBefore == nil || req.IDBefore == nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "likes_count_before and id_before must be provided together"})
+			apierror.Write(c, apierror.ValidationFailed)
 			return
 		}
 		likesCountBefore := *req.LikesCountBefore
 		idBefore := *req.IDBefore
 
 		if likesCountBefore < 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid cursor: likes_count_before must be >= 0"})
+			apierror.Write(c, apierror.ValidationFailed)
 			return
 		}
 		if idBefore == 0 {
 			if likesCountBefore != 0 {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid cursor: id_before must be > 0"})
+				apierror.Write(c, apierror.ValidationFailed)
 				return
 			}
 		} else {
@@ -88,7 +89,7 @@ func (f *FeedHandler) ListLikesCount(c *gin.Context) {
 	}
 	feedItems, err := f.service.ListLikesCount(c.Request.Context(), req.Limit, cursor, viewerAccountID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierror.From(c, err, apierror.VideoNotFound)
 		return
 	}
 	feedItems.VideoList = nonNilFeedVideoItems(feedItems.VideoList)
@@ -99,7 +100,7 @@ func (f *FeedHandler) ListLikesCount(c *gin.Context) {
 func (f *FeedHandler) ListByFollowing(c *gin.Context) {
 	var req ListByFollowingRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.Write(c, apierror.ValidationFailed)
 		return
 	}
 	if req.Limit <= 0 || req.Limit > 50 {
@@ -115,7 +116,7 @@ func (f *FeedHandler) ListByFollowing(c *gin.Context) {
 	}
 	feedItems, err := f.service.ListByFollowing(c.Request.Context(), req.Limit, latestTime, viewerAccountID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierror.From(c, err, apierror.AccountNotFound)
 		return
 	}
 	feedItems.VideoList = nonNilFeedVideoItems(feedItems.VideoList)
@@ -127,7 +128,7 @@ func (f *FeedHandler) ListByFollowing(c *gin.Context) {
 func (f *FeedHandler) ListByPopularity(c *gin.Context) {
 	var req ListByPopularityRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.Write(c, apierror.ValidationFailed)
 		return
 	}
 	if req.Limit <= 0 || req.Limit > 50 {
@@ -143,14 +144,14 @@ func (f *FeedHandler) ListByPopularity(c *gin.Context) {
 	var latestIDBefore uint
 
 	if req.LatestPopularity < 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "latest_popularity must be >= 0"})
+		apierror.Write(c, apierror.ValidationFailed)
 		return
 	}
 
 	anyCursor := !req.LatestBefore.IsZero() || req.LatestIDBefore != nil
 	if anyCursor {
 		if req.LatestBefore.IsZero() || req.LatestIDBefore == nil || *req.LatestIDBefore == 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "latest_before and latest_id_before must be provided together"})
+			apierror.Write(c, apierror.ValidationFailed)
 			return
 		}
 		latestPopularity = req.LatestPopularity
@@ -160,7 +161,7 @@ func (f *FeedHandler) ListByPopularity(c *gin.Context) {
 
 	resp, err := f.service.ListByPopularity(c.Request.Context(), req.Limit, req.AsOf, req.Offset, viewerAccountID, latestPopularity, latestBefore, latestIDBefore)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierror.From(c, err, apierror.AccountNotFound)
 		return
 	}
 	resp.VideoList = nonNilFeedVideoItems(resp.VideoList)

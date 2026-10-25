@@ -5,9 +5,9 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"feed-to-go/pkg/apierror"
 	"feed-to-go/pkg/cache"
 	"feed-to-go/pkg/logging"
-	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -32,12 +32,12 @@ func JWTAuth(accountRepo TokenRepository, cache *cache.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing authorization header"})
+			apierror.Write(c, apierror.AuthRequired)
 			return
 		}
 		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header"})
+			apierror.Write(c, apierror.InvalidToken)
 			return
 		}
 
@@ -45,7 +45,11 @@ func JWTAuth(accountRepo TokenRepository, cache *cache.Client) gin.HandlerFunc {
 
 		claims, err := ParseToken(tokenString)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header"})
+			if errors.Is(err, jwt.ErrTokenExpired) {
+				apierror.Write(c, apierror.TokenExpired)
+			} else {
+				apierror.Write(c, apierror.InvalidToken)
+			}
 			return
 		}
 		check(c, claims, tokenString, accountRepo, cache)
@@ -63,7 +67,7 @@ func SoftJWTAuth(accountRepo TokenRepository, cache *cache.Client) gin.HandlerFu
 
 		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header"})
+			apierror.Write(c, apierror.InvalidToken)
 			return
 		}
 
@@ -71,7 +75,11 @@ func SoftJWTAuth(accountRepo TokenRepository, cache *cache.Client) gin.HandlerFu
 
 		claims, err := ParseToken(tokenString)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired token"})
+			if errors.Is(err, jwt.ErrTokenExpired) {
+				apierror.Write(c, apierror.TokenExpired)
+			} else {
+				apierror.Write(c, apierror.InvalidToken)
+			}
 			return
 		}
 
@@ -88,7 +96,7 @@ func check(c *gin.Context, claims *Claims, tokenString string, accountRepo Token
 		b, err := cache.GetBytes(cacheCtx, key)
 		if err == nil {
 			if string(b) != tokenString {
-				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "token has been revoked"})
+				apierror.Write(c, apierror.TokenRevoked)
 				return
 			}
 			c.Set("accountID", claims.AccountID)
@@ -100,8 +108,12 @@ func check(c *gin.Context, claims *Claims, tokenString string, accountRepo Token
 
 	// redis fail: check db
 	storedToken, err := accountRepo.FindTokenByID(c.Request.Context(), claims.AccountID)
-	if err != nil || storedToken == "" || storedToken != tokenString {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "token has been revoked"})
+	if err != nil {
+		apierror.From(c, err, apierror.TokenRevoked)
+		return
+	}
+	if storedToken == "" || storedToken != tokenString {
+		apierror.Write(c, apierror.TokenRevoked)
 		return
 	}
 

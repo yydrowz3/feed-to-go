@@ -1,3 +1,5 @@
+import { LocaleSelect } from "../i18n/ui";
+import { useAppTranslation } from "../i18n/react";
 import { useEffect } from "react";
 import type { ReactNode } from "react";
 import { Link, useLocation, useNavigate, useSearch } from "@tanstack/react-router";
@@ -6,15 +8,17 @@ import { z } from "zod";
 import { Home, Flame, Plus, UserRound, MessageCircle, Settings, Search, Play } from "lucide-react";
 import { useAuth } from "../lib/app-context";
 import { UserAvatar } from "./UserAvatar";
+import { ThemeToggle } from "./ThemeToggle";
 const navigation = [
-  { to: "/", label: "推荐", icon: Home },
-  { to: "/hot", label: "热榜", icon: Flame },
-  { to: "/video", label: "发布", icon: Plus },
-  { to: "/account", label: "账号", icon: UserRound },
-  { to: "/messages", label: "私信", icon: MessageCircle },
-  { to: "/settings", label: "设置", icon: Settings },
+  { to: "/", label: "navigation.home", icon: Home },
+  { to: "/hot", label: "navigation.hot", icon: Flame },
+  { to: "/video", label: "navigation.publish", icon: Plus },
+  { to: "/account", label: "navigation.account", icon: UserRound },
+  { to: "/messages", label: "navigation.messages", icon: MessageCircle },
+  { to: "/settings", label: "navigation.settings", icon: Settings },
 ] as const;
 export function AppShell({ children }: { children: ReactNode }) {
+  const { t } = useAppTranslation();
   const auth = useAuth();
   const location = useLocation();
   const search = useSearch({ strict: false });
@@ -36,9 +40,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       <aside className="hidden w-56 shrink-0 flex-col gap-6 border-r border-base-content/10 bg-base-200 p-4 md:flex">
         <Link to="/" className="flex items-center gap-2 p-2 text-xl font-black">
           <Play className="text-primary" />
-          ShortVideo
+          Feed to Go
         </Link>
-        <nav className="grid gap-2" aria-label="主导航">
+        <nav className="grid gap-2" aria-label={t("navigation.main")}>
           {links.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
@@ -48,26 +52,26 @@ export function AppShell({ children }: { children: ReactNode }) {
               activeProps={{ className: "btn-active text-primary" }}
             >
               <Icon size={18} />
-              {label}
+              {t(label)}
             </Link>
           ))}
         </nav>
         <div className="mt-auto grid gap-3 border-t border-base-content/10 pt-4">
           <div className="flex min-w-0 items-center gap-3">
-            <UserAvatar username={auth.username || "访客"} size="sm" />
+            <UserAvatar username={auth.username || t("account.guest")} size="sm" />
             <span className="truncate text-sm">
-              {auth.accessToken ? auth.username + " #" + auth.accountId : "未登录"}
+              {auth.accessToken ? auth.username + " #" + auth.accountId : t("account.signedOut")}
             </span>
           </div>
           <Link to={auth.accessToken ? "/settings" : "/account"} className="btn btn-primary btn-sm">
-            {auth.accessToken ? "账号设置" : "登录"}
+            {auth.accessToken ? t("account.settings") : t("account.signIn")}
           </Link>
         </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex shrink-0 items-center gap-4 border-b border-base-content/10 bg-base-200 px-3 py-3 md:px-6">
+        <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-base-content/10 bg-base-200 px-3 py-3 md:px-6">
           <form
-            className="mx-auto flex w-full max-w-xl gap-2"
+            className="mx-auto flex min-w-0 flex-1 basis-48 max-w-xl gap-2"
             onSubmit={(event) => {
               event.preventDefault();
               event.stopPropagation();
@@ -77,27 +81,29 @@ export function AppShell({ children }: { children: ReactNode }) {
             <form.Field name="q">
               {(field) => (
                 <input
-                  aria-label="搜索标题或作者"
+                  aria-label={t("navigation.searchLabel")}
                   className="input min-w-0 flex-1"
-                  placeholder="搜索标题 / 作者（本地过滤）"
+                  placeholder={t("navigation.searchPlaceholder")}
                   value={field.state.value}
                   onChange={(event) => field.handleChange(event.target.value)}
                   onBlur={field.handleBlur}
                 />
               )}
             </form.Field>
-            <button type="submit" className="btn btn-primary" aria-label="搜索">
+            <button type="submit" className="btn btn-primary" aria-label={t("navigation.search")}>
               <Search size={18} />
-              <span className="hidden sm:inline">搜索</span>
+              <span className="hidden sm:inline">{t("navigation.search")}</span>
             </button>
           </form>
+          <LocaleSelect />
+          <ThemeToggle />
           <Link to="/video" className="btn btn-ghost hidden lg:inline-flex">
             <Plus size={18} />
-            发布视频
+            {t("publish.heading")}
           </Link>
         </header>
         <nav
-          aria-label="移动端导航"
+          aria-label={t("navigation.mobile")}
           className="flex shrink-0 overflow-x-auto border-b border-base-content/10 bg-base-200 md:hidden"
         >
           {links.map(({ to, label, icon: Icon }) => (
@@ -109,7 +115,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               activeProps={{ className: "bg-primary/10 text-primary" }}
             >
               <Icon size={18} />
-              {label}
+              {t(label)}
             </Link>
           ))}
         </nav>

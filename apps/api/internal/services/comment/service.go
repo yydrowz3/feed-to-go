@@ -5,6 +5,7 @@ import (
 	"errors"
 	"feed-to-go/internal/services/video"
 	"feed-to-go/internal/util"
+	"feed-to-go/pkg/apierror"
 	"feed-to-go/pkg/cache"
 	"feed-to-go/pkg/mq"
 	"log"
@@ -30,15 +31,15 @@ func NewCommentService(repo *CommentRepository, videoRepo *video.VideoRepository
 
 func (s *CommentService) Publish(ctx context.Context, comment *Comment) error {
 	if comment == nil {
-		return errors.New("comment is nil")
+		return apierror.ValidationFailed
 	}
 	comment.Username = strings.TrimSpace(comment.Username)
 	comment.Content = strings.TrimSpace(comment.Content)
 	if comment.VideoID == 0 || comment.AuthorID == 0 {
-		return errors.New("video_id and author_id are required")
+		return apierror.ValidationFailed
 	}
 	if comment.Content == "" {
-		return errors.New("content is required")
+		return apierror.ValidationFailed
 	}
 
 	exists, err := s.VideoRepository.IsExist(ctx, comment.VideoID)
@@ -46,7 +47,7 @@ func (s *CommentService) Publish(ctx context.Context, comment *Comment) error {
 		return err
 	}
 	if !exists {
-		return errors.New("video not found")
+		return apierror.VideoNotFound
 	}
 
 	commentEnqueued := false
@@ -71,7 +72,7 @@ func (s *CommentService) Publish(ctx context.Context, comment *Comment) error {
 		if err := s.repo.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 			if err := tx.Select("id").First(&video.Video{}, comment.VideoID).Error; err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
-					return errors.New("video not found")
+					return apierror.VideoNotFound
 				}
 				return err
 			}
@@ -100,10 +101,10 @@ func (s *CommentService) Delete(ctx context.Context, commentID uint, accountID u
 		return err
 	}
 	if comment == nil {
-		return errors.New("comment not found")
+		return apierror.CommentNotFound
 	}
 	if comment.AuthorID != accountID {
-		return util.ErrUnauthorized
+		return apierror.Forbidden
 	}
 	if s.commentMQ != nil {
 		if err := s.commentMQ.Delete(ctx, commentID); err == nil {
@@ -120,7 +121,7 @@ func (s *CommentService) GetAll(ctx context.Context, videoID uint) ([]Comment, e
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.New("video not found")
+		return nil, apierror.VideoNotFound
 	}
 
 	return s.repo.GetAllComments(ctx, videoID)

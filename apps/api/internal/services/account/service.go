@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"feed-to-go/internal/auth"
+	"feed-to-go/pkg/apierror"
 	"feed-to-go/pkg/cache"
 	"feed-to-go/pkg/logging"
 	"strconv"
@@ -19,8 +20,8 @@ type AccountService struct {
 }
 
 var (
-	ErrUsernameTaken       = errors.New("username already exists")
-	ErrNewUsernameRequired = errors.New("new_username is required")
+	ErrUsernameTaken       = apierror.UsernameTaken
+	ErrNewUsernameRequired = apierror.ValidationFailed
 )
 
 func NewAccountService(accountRepository *AccountRepository, cache *cache.Client) *AccountService {
@@ -187,7 +188,7 @@ func (as *AccountService) Logout(ctx context.Context, accountID uint) error {
 
 func (as *AccountService) RefreshAccessToken(ctx context.Context, refreshToken string) (string, uint, string, error) {
 	if refreshToken == "" {
-		return "", 0, "", errors.New("refresh token is empty")
+		return "", 0, "", apierror.InvalidRefreshToken
 	}
 	if as.cache != nil {
 		cacheCtx, cancel := context.WithTimeout(ctx, 1*time.Minute)
@@ -231,5 +232,5 @@ func (as *AccountService) RefreshAccessToken(ctx context.Context, refreshToken s
 		}
 	}
 
-	return "", 0, "", errors.New("invalid refresh token")
+	return "", 0, "", apierror.InvalidRefreshToken
 }

@@ -16,10 +16,10 @@ type Video struct {
 }
 
 type PublishVideoRequest struct {
-	Title       string `json:"title"`
+	Title       string `json:"title" binding:"required"`
 	Description string `json:"description"`
-	PlayURL     string `json:"play_url"`
-	CoverURL    string `json:"cover_url"`
+	PlayURL     string `json:"play_url" binding:"required"`
+	CoverURL    string `json:"cover_url" binding:"required"`
 }
 
 type DeleteVideoRequest struct {
@@ -27,11 +27,11 @@ type DeleteVideoRequest struct {
 }
 
 type ListByAuthorIDRequest struct {
-	AuthorID uint `json:"author_id"`
+	AuthorID uint `json:"author_id" binding:"required"`
 }
 
 type GetDetailRequest struct {
-	ID uint `json:"id"`
+	ID uint `json:"id" binding:"required"`
 }
 
 type UpdateLikesCountRequest struct {

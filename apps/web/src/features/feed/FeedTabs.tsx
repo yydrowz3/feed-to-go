@@ -1,3 +1,4 @@
+import { useAppTranslation } from "../../i18n/react";
 import type { FeedKind } from "./pagination";
 export function FeedTabs({
   value,
@@ -6,17 +7,18 @@ export function FeedTabs({
   value: FeedKind;
   onChange: (kind: FeedKind) => void;
 }) {
+  const { t } = useAppTranslation();
   return (
     <div
       role="tablist"
-      aria-label="视频流"
+      aria-label={t("feed.tabs")}
       className="tabs tabs-border shrink-0 justify-center bg-base-200"
     >
       {(
         [
-          ["latest", "推荐"],
-          ["following", "关注"],
-          ["likesCount", "点赞榜"],
+          ["latest", t("navigation.home")],
+          ["following", t("social.following")],
+          ["likesCount", t("feed.mostLiked")],
         ] as const
       ).map(([kind, label]) => (
         <button

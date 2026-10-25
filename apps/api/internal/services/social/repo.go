@@ -3,6 +3,7 @@ package social
 import (
 	"context"
 	"feed-to-go/internal/services/account"
+	"feed-to-go/pkg/apierror"
 
 	"gorm.io/gorm"
 )
@@ -16,11 +17,22 @@ func NewSocialRepository(db *gorm.DB) *SocialRepository {
 }
 
 func (r *SocialRepository) Follow(ctx context.Context, social *Social) error {
-	return r.db.WithContext(ctx).Create(social).Error
+	err := r.db.WithContext(ctx).Create(social).Error
+	if apierror.IsDuplicate(err) {
+		return apierror.AlreadyFollowed
+	}
+	return err
 }
 
 func (r *SocialRepository) Unfollow(ctx context.Context, social *Social) error {
-	return r.db.WithContext(ctx).Where("follower_id = ? AND following_id = ?", social.FollowerID, social.FollowingID).Delete(&Social{}).Error
+	result := r.db.WithContext(ctx).Where("follower_id = ? AND following_id = ?", social.FollowerID, social.FollowingID).Delete(&Social{})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return apierror.NotFollowing
+	}
+	return nil
 }
 
 func (r *SocialRepository) GetAllFollowers(ctx context.Context, FollowingID uint) ([]*account.Account, error) {

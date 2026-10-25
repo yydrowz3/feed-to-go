@@ -7,7 +7,19 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dist = path.join(root, "dist");
 const index = await readFile(path.join(dist, "index.html"), "utf8");
-const fixtureIndex = index
+const configDistArg = process.argv.indexOf("--config-dist");
+const configDist = configDistArg < 0 ? null : path.resolve(process.argv[configDistArg + 1]);
+const captureTheme = (html) =>
+  html.replace(
+    "</head>",
+    `<script>window.fixtureThemeAtStartup = document.documentElement.dataset.theme;</script></head>`,
+  );
+const configIndex = configDist
+  ? captureTheme(await readFile(path.join(configDist, "index.html"), "utf8"))
+      .replaceAll("/assets/", "/__config-assets/")
+      .replace("<head>", '<head><script src="/__fixture.js"></script>')
+  : null;
+const fixtureIndex = captureTheme(index)
   .replace("<head>", '<head><script src="/__fixture.js"></script>')
   .replace(
     /<script type="module" crossorigin src="([^"]+)"><\/script>/,
@@ -72,7 +84,22 @@ function installFixture() {
       .replace(/\//g, "_")}.fixture`;
   let username = "fixture-one",
     serial = 0;
-  localStorage.clear();
+  if (!config.preserveLocale) localStorage.clear();
+  else {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+  }
+  if (config.locale) localStorage.setItem("feed-to-go.locale", config.locale);
+  if (config.theme) localStorage.setItem("feed-to-go.theme", config.theme);
+  if (config.systemTheme) {
+    const matchMedia = window.matchMedia.bind(window);
+    window.matchMedia = (query) => {
+      const result = matchMedia(query);
+      if (query === "(prefers-color-scheme: dark)")
+        Object.defineProperty(result, "matches", { value: config.systemTheme === "dark" });
+      return result;
+    };
+  }
   if (config.auth !== false) {
     localStorage.setItem("access_token", token(1, username));
     localStorage.setItem("refresh_token", "fixture-refresh");
@@ -372,7 +399,222 @@ async function runChecks() {
     await pause(40);
   };
   const count = (route) => win.fixture.requests.filter((r) => r.path === route).length;
+  const switchLanguage = async (locale) => {
+    const select = await until(() => doc.querySelector("select"), "language selector");
+    select.value = locale;
+    select.dispatchEvent(new win.Event("change", { bubbles: true }));
+    await until(() => doc.documentElement.lang === locale, "locale " + locale);
+  };
+  const submit = async () => {
+    const element = doc.querySelector('[data-testid="form-submit"]');
+    assert(element && !element.disabled, "submit available");
+    element.click();
+    await pause(80);
+  };
+  const toggleTheme = async () => {
+    const previous = doc.documentElement.dataset.theme;
+    const toggle = await until(
+      () => doc.querySelector('[data-testid="theme-toggle"]'),
+      "theme toggle",
+    );
+    toggle.click();
+    const expected = previous === "night" ? "light" : "night";
+    await until(() => doc.documentElement.dataset.theme === expected, "theme change");
+    assert(
+      doc.documentElement.style.colorScheme === (expected === "night" ? "dark" : "light"),
+      "native control color scheme",
+    );
+    await pause(40);
+    return expected;
+  };
   try {
+    for (const systemTheme of ["light", "dark"]) {
+      await open("/account", { auth: false, systemTheme });
+      const expected = systemTheme === "dark" ? "night" : "light";
+      assert(win.fixtureThemeAtStartup === expected, "system theme before React mounts");
+      assert(doc.documentElement.dataset.theme === expected, "React reuses initial theme");
+      assert(!win.localStorage.getItem("feed-to-go.theme"), "system default is not saved");
+      await fill("login-username", "theme-draft");
+      const header = doc.querySelector("header");
+      const background = win.getComputedStyle(header).backgroundColor;
+      await toggleTheme();
+      assert(win.getComputedStyle(header).backgroundColor !== background, "page colors change");
+      assert(
+        doc.getElementById("login-username").value === "theme-draft",
+        "theme preserves form draft",
+      );
+      const saved = win.localStorage.getItem("feed-to-go.theme");
+      assert(saved === (systemTheme === "dark" ? "light" : "dark"), "manual preference saved");
+      await open("/account", { auth: false, systemTheme, preserveLocale: true });
+      assert(
+        win.fixtureThemeAtStartup === (saved === "dark" ? "night" : "light"),
+        "saved preference restored before React",
+      );
+      assert(
+        doc.documentElement.dataset.theme === win.fixtureThemeAtStartup,
+        "saved preference survives mount",
+      );
+    }
+    record(
+      "system light/dark before React, saved preference restoration, page colors and form draft preservation",
+    );
+    await open("/account", { auth: false });
+    assert(doc.documentElement.lang === "en", "first visit uses English");
+    await fill("login-username", "draft-原文");
+    await submit();
+    await until(() => text("Enter a password."), "English validation");
+    for (const [locale, error] of [
+      ["zh-CN", "请输入密码"],
+      ["ja", "パスワードを入力してください"],
+      ["en", "Enter a password."],
+    ]) {
+      await switchLanguage(locale);
+      assert(text(error), "existing validation updates " + locale);
+      assert(
+        doc.getElementById("login-username").value === "draft-原文",
+        "input survives locale change",
+      );
+    }
+    await switchLanguage("ja");
+    await open("/account", { auth: false, preserveLocale: true });
+    assert(doc.documentElement.lang === "ja", "preference restored on reload");
+    record(
+      "English default, three-language switching, validation and draft preservation, preference restoration",
+    );
+    for (const locale of ["en", "zh-CN", "ja"]) {
+      for (const [route, ready] of [
+        ["/", "video"],
+        ["/hot", "ol"],
+        ["/account", '[role="tablist"]'],
+        ["/settings", '[data-testid="signout-open"]'],
+        ["/video", "#publish-title"],
+        ["/u/2", "h1"],
+        ["/messages", "ul"],
+        ["/messages/2", '[role="log"]'],
+        ["/video/1", '[data-testid="comments-open"]'],
+        ["/account/register", "#account-username"],
+        ["/account/change-password", "#account-old_password"],
+      ]) {
+        await open(route, { locale });
+        await until(() => doc.querySelector(ready), "localized route " + route);
+        for (const width of [1440, 390]) {
+          frame.width = String(width);
+          frame.height = String(width === 390 ? 844 : 900);
+          await pause(100);
+          assert(
+            doc.documentElement.scrollWidth <= width,
+            "three-language overflow " + route + "/" + locale + "/" + width,
+          );
+          const select = doc.querySelector("header select");
+          assert(select?.getClientRects().length, "visible language selector");
+          const toggle = doc.querySelector('[data-testid="theme-toggle"]');
+          const labels = {
+            en: ["Switch to light mode", "Switch to dark mode"],
+            "zh-CN": ["切换到浅色", "切换到深色"],
+            ja: ["ライトモードに切り替え", "ダークモードに切り替え"],
+          };
+          for (let mode = 0; mode < 2; mode++) {
+            const rect = toggle.getBoundingClientRect();
+            assert(rect.width > 0 && rect.left >= 0 && rect.right <= width, "visible theme toggle");
+            assert(
+              toggle.getAttribute("aria-label") ===
+                labels[locale][doc.documentElement.dataset.theme === "night" ? 0 : 1],
+              "localized theme action",
+            );
+            await toggleTheme();
+            assert(doc.documentElement.scrollWidth <= width, "theme layout overflow");
+          }
+        }
+      }
+    }
+    record(
+      "English, Chinese and Japanese layouts in both themes at 1440x900 and 390x844 keep language and theme controls accessible",
+    );
+    for (const [locale, registered] of [
+      ["en", "Account created. Please sign in."],
+      ["zh-CN", "注册成功，请登录"],
+      ["ja", "登録しました。ログインしてください。"],
+    ]) {
+      await open("/account/register", { auth: false, locale });
+      await fill("account-username", "fixture-new");
+      await fill("account-password", "fixture-pass");
+      await submit();
+      await until(
+        () => doc.querySelector("[data-sonner-toast]")?.textContent.includes(registered),
+        "localized toast",
+      );
+      for (let mode = 0; mode < 2; mode++) {
+        const theme = await toggleTheme();
+        assert(
+          doc.querySelector("[data-sonner-toaster]")?.dataset.sonnerTheme ===
+            (theme === "night" ? "dark" : "light"),
+          "visible toast follows theme",
+        );
+        assert(doc.querySelector("[data-sonner-toast]"), "theme keeps visible toast");
+      }
+      await switchLanguage("en");
+      assert(
+        doc
+          .querySelector("[data-sonner-toast]")
+          ?.textContent.includes("Account created. Please sign in."),
+        "visible toast updates",
+      );
+      await open("/video/1", { locale });
+      await until(() => doc.querySelector('[data-testid="comments-open"]'), "comments trigger");
+      doc.querySelector('[data-testid="comments-open"]').click();
+      await until(() => doc.querySelector("dialog[open]"), "localized dialog");
+      await fill("comment-content", "comment-原文");
+      await switchLanguage("en");
+      assert(
+        doc.querySelector("dialog[open]") &&
+          doc.getElementById("comment-content").value === "comment-原文",
+        "dialog and draft survive language change",
+      );
+    }
+    record(
+      "three-language success toasts and comment dialogs update in place while preserving comment drafts",
+    );
+    await open("/settings", { locale: "ja" });
+    await until(() => doc.querySelector('[data-testid="signout-open"]'), "sign-out control");
+    await toggleTheme();
+    const savedTheme = win.localStorage.getItem("feed-to-go.theme");
+    doc.querySelector('[data-testid="signout-open"]').click();
+    await until(() => doc.querySelector("dialog[open]"), "sign-out confirmation");
+    doc.querySelector('[data-testid="confirm-action"]').click();
+    await until(() => !win.localStorage.getItem("access_token"), "sign-out");
+    await until(() => win.location.pathname === "/", "sign-out navigation");
+    await nav("/account");
+    await fill("login-username", "fixture-one");
+    await fill("login-password", "fixture-pass");
+    await submit();
+    await until(() => win.localStorage.getItem("access_token"), "sign-in");
+    assert(
+      doc.documentElement.lang === "ja" && win.localStorage.getItem("feed-to-go.locale") === "ja",
+      "locale survives sign-out and sign-in",
+    );
+    record("language preference survives sign-out and sign-in");
+    assert(
+      win.localStorage.getItem("feed-to-go.theme") === savedTheme &&
+        doc.documentElement.dataset.theme === (savedTheme === "dark" ? "night" : "light"),
+      "theme survives sign-out and sign-in",
+    );
+    record("theme preference survives sign-out and sign-in");
+    if (configIndexAvailable) {
+      await open("/__config", { auth: false, locale: "ja" });
+      await until(() => text("アプリの設定エラー"), "localized configuration error");
+      await switchLanguage("zh-CN");
+      assert(text("应用配置错误"), "configuration error switches language");
+      await toggleTheme();
+      assert(!doc.querySelector("main[data-theme]"), "configuration page inherits global theme");
+      assert(
+        win.getComputedStyle(doc.querySelector("main")).colorScheme ===
+          doc.documentElement.style.colorScheme,
+        "configuration page uses selected scheme",
+      );
+      record(
+        "configuration errors restore and switch language and theme before the application runtime exists",
+      );
+    }
     for (const route of ["/video", "/settings", "/messages", "/messages/2"]) {
       await open(route, { auth: false });
       await until(() => win.location.pathname === "/account", "anonymous guard");
@@ -385,16 +627,16 @@ async function runChecks() {
     record("anonymous guards preserve all four protected targets");
     await fill("login-username", "fixture-one");
     await fill("login-password", "fixture-pass");
-    await click("登录");
-    await until(() => text("私信记录") || doc.querySelector('[role="log"]'), "login return");
+    await click("Sign in");
+    await until(() => text("Message history") || doc.querySelector('[role="log"]'), "login return");
     assert(win.location.pathname === "/messages/2", "login target");
     record("login returns to protected conversation");
     await nav("/settings");
-    await until(() => text("账号设置"), "settings");
-    await click("修改用户名");
+    await until(() => text("Account settings"), "settings");
+    await click("Change username");
     await fill("account-username", "fixture-renamed");
     win.fixture.fail("/account/rename", 401);
-    await click("保存用户名");
+    await click("Save username");
     await until(
       () => text("fixture-renamed") && !doc.querySelector("dialog[open]"),
       "rename after refresh",
@@ -405,7 +647,7 @@ async function runChecks() {
     await until(() => doc.getElementById("account-old_password"), "password form");
     await fill("account-old_password", "fixture-pass");
     await fill("account-new_password", "fixture-new-pass");
-    await click("修改密码");
+    await click("Change password");
     await until(() => win.location.pathname === "/account", "password return");
     assert(
       !win.localStorage.getItem("access_token") && !win.localStorage.getItem("refresh_token"),
@@ -414,27 +656,36 @@ async function runChecks() {
     record("fixture own-password UI clears session and returns to login");
     for (const status of [404, 429, 500, "offline"]) {
       await open("/hot");
-      await until(() => text("热度榜") || text("热榜"), "hot");
+      await until(() => text("Trending") || text("Trending"), "hot");
       win.fixture.fail("/feed/listByPopularity", status);
-      await click("刷新 / 应用");
+      await click("Refresh / Apply");
       await until(
-        () => text(status === "offline" ? "Fixture network unavailable" : `Fixture HTTP ${status}`),
+        () =>
+          text(
+            status === "offline"
+              ? "Unable to connect."
+              : status === 429
+                ? "Too many requests."
+                : status === 404
+                  ? "Unable to load this page."
+                  : "A server error occurred.",
+          ),
         "visible failure",
       );
       assert(
         doc.querySelectorAll("[data-sonner-toast]").length === 0,
         "read error toast duplication",
       );
-      await click("刷新 / 应用");
-      await until(
-        () => !text("Fixture HTTP") && !text("Fixture network unavailable"),
-        "read recovery",
-      );
+      await click("Refresh / Apply");
+      await until(() => !doc.querySelector('[role="alert"]'), "read recovery");
     }
     record("404/429/500/offline reads preserve a retryable UI without duplicate toasts");
     await open("/messages", { failures: [["/social/getAllFollowers", 500]] });
-    await until(() => text("粉丝联系人加载失败") && text("发私信"), "partial contacts");
-    assert(!text("暂无联系人"), "partial failure keeps successful contacts");
+    await until(
+      () => text("Unable to load follower contacts") && text("Message"),
+      "partial contacts",
+    );
+    assert(!text("No contacts yet"), "partial failure keeps successful contacts");
     record("partial contact failure retains the successful list and separate retry");
     await nav("/messages/2");
     await until(
@@ -443,11 +694,20 @@ async function runChecks() {
     );
     await fill("message-content", "failed draft");
     win.fixture.fail("/message/send", 500);
-    await click("发送");
-    await until(() => text("发送失败，草稿已保留"), "draft failure");
+    await click("Send");
+    await until(() => text("Sending failed. Your draft was kept."), "draft failure");
     assert(doc.getElementById("message-content").value === "failed draft", "draft survives");
     assert(count("/message/send") === 1, "send does not retry");
-    record("message failure keeps draft and never retries automatically");
+    await switchLanguage("ja");
+    assert(text("下書きは保存されています"), "retained message guidance updates");
+    assert(
+      doc.getElementById("message-content").value === "failed draft",
+      "message draft survives language switch",
+    );
+    await switchLanguage("en");
+    record(
+      "message failure keeps draft and never retries automatically; guidance updates on language switch",
+    );
     for (const width of [1440, 390, 360]) {
       frame.width = String(width);
       await pause(100);
@@ -471,34 +731,34 @@ async function runChecks() {
     win.fixture.files();
     await pause(80);
     win.fixture.fail("/video/chunk/init", 503);
-    await click("发布视频");
-    await until(() => text("Fixture HTTP 503"), "Redis unavailable UI");
+    await click("Publish video");
+    await until(() => text("Upload service is unavailable."), "Redis unavailable UI");
     assert(count("/video/chunk/upload") === 0, "503 blocks chunks");
     win.fixture.fail("/video/chunk/upload", 500, 3);
-    await click("重试发布");
+    await click("Retry publishing");
     await until(
-      () => count("/video/chunk/upload") === 3 && text("Fixture HTTP 500"),
+      () => count("/video/chunk/upload") === 3 && text("A server error occurred."),
       "three chunk attempts",
     );
     assert(count("/video/chunk/complete") === 0, "failed chunks block merge");
     win.fixture.fail("/video/chunk/upload", 401);
     win.fixture.fail("/video/uploadCover", 500);
-    await click("重试发布");
+    await click("Retry publishing");
     await until(
-      () => count("/video/uploadCover") === 1 && text("Fixture HTTP 500"),
+      () => count("/video/uploadCover") === 1 && text("A server error occurred."),
       "cover failure",
     );
     assert(count("/account/refresh") === 1, "FormData refresh");
     const merged = count("/video/chunk/complete");
-    await click("重试发布");
-    await until(() => text("Fixture action rejected"), "publish refusal");
+    await click("Retry publishing");
+    await until(() => text("Invalid request."), "publish refusal");
     assert(count("/video/chunk/complete") === merged, "cover retry reuses video");
     const covers = count("/video/uploadCover");
     win.fixture.fail("/video/publish", "offline");
-    await click("重试发布");
-    await until(() => text("发布结果暂时无法确认"), "unknown publish result");
+    await click("Retry publishing");
+    await until(() => text("The publishing result is unknown."), "unknown publish result");
     const published = count("/video/publish");
-    await click("重试发布");
+    await click("Retry publishing");
     await pause(150);
     assert(
       count("/video/publish") === published && count("/video/uploadCover") === covers,
@@ -513,9 +773,31 @@ async function runChecks() {
     win.fixture.files();
     await pause(80);
     win.fixture.fail("/video/chunk/upload", 0, 1, 60000);
-    await click("发布视频");
+    await click("Publish video");
     await until(() => count("/video/chunk/upload") === 1, "held upload");
-    await click("取消上传");
+    const selected = doc.getElementById("publish-video").files[0];
+    await toggleTheme();
+    assert(
+      doc.getElementById("publish-video").files[0] === selected,
+      "theme preserves selected upload file",
+    );
+    assert(
+      doc.getElementById("publish-title").value === "cancelled fixture",
+      "theme preserves upload draft",
+    );
+    assert(count("/video/chunk/upload") === 1, "theme does not restart upload");
+    await switchLanguage("ja");
+    assert(
+      doc.getElementById("publish-video").files[0] === selected,
+      "selected upload file survives language switch",
+    );
+    assert(
+      doc.getElementById("publish-title").value === "cancelled fixture",
+      "upload draft survives language switch",
+    );
+    assert(count("/video/chunk/upload") === 1, "language switch does not restart upload");
+    await switchLanguage("en");
+    await click("Cancel upload");
     await until(() => win.fixture.requests.some((r) => r.status === "aborted"), "upload aborted");
     assert(
       count("/video/chunk/complete") === 0 && count("/video/uploadCover") === 0,
@@ -527,7 +809,7 @@ async function runChecks() {
     );
     record("upload cancellation aborts transport, stops later stages and retains the draft");
     await nav("/settings");
-    await until(() => text("账号设置"), "resource baseline");
+    await until(() => text("Account settings"), "resource baseline");
     const baseline = win.fixture.stats();
     for (let cycle = 0; cycle < 12; cycle++) {
       await nav("/");
@@ -540,7 +822,7 @@ async function runChecks() {
           scroller.scrollTop = i * scroller.clientHeight;
           await until(() => {
             const b = scroller.children[i]?.querySelector(
-              'button[aria-label="播放"],button[aria-label="暂停"]',
+              'button[aria-label="Play"],button[aria-label="Pause"]',
             );
             return b && !b.disabled;
           }, "active slide " + i);
@@ -553,15 +835,31 @@ async function runChecks() {
         record("ten video scroll positions preserve height, position and adjacent-only playback");
       }
       await nav("/video/1");
-      await until(() => button("评论"), "detail");
-      await click("评论");
+      await until(() => button("Comments"), "detail");
+      if (cycle === 0) {
+        const video = doc.querySelector("video");
+        const time = video?.currentTime;
+        const paused = video?.paused;
+        await toggleTheme();
+        assert(doc.querySelector("video") === video, "player survives theme change");
+        assert(
+          !video || (video.currentTime >= time && video.paused === paused),
+          "theme preserves playback position and state",
+        );
+        await switchLanguage("ja");
+        assert(doc.querySelector("video") === video, "player element survives locale change");
+        assert(!video || video.currentTime >= time, "playback position survives locale change");
+        await switchLanguage("en");
+        record("video element and playback position survive language switching");
+      }
+      await click("Comments");
       await until(() => doc.querySelector("dialog[open]"), "comments");
-      await click("关闭");
+      await click("Close");
       await until(() => !doc.querySelector("dialog[open]"), "close comments");
-      assert(doc.activeElement === button("评论"), "dialog restores focus");
+      assert(doc.activeElement === button("Comments"), "dialog restores focus");
       await nav("/account");
       await nav("/messages");
-      await until(() => text("发私信"), "contacts cycle");
+      await until(() => text("Message"), "contacts cycle");
       await nav("/messages/2");
       await until(() => doc.getElementById("message-content"), "conversation cycle");
       await nav("/video");
@@ -570,7 +868,7 @@ async function runChecks() {
       await pause(80);
       assert(win.fixture.stats().objectURLs === 2, "preview URLs created");
       await nav("/settings");
-      await until(() => text("账号设置"), "cleanup");
+      await until(() => text("Account settings"), "cleanup");
       await pause(100);
       const stats = win.fixture.stats();
       report.cycles.push(stats);
@@ -600,6 +898,7 @@ async function runChecks() {
   }
   output.textContent = JSON.stringify(report, null, 2);
   document.title = "Browser regression: " + report.status;
+  document.querySelector("h1").textContent = document.title;
   await fetch("/__report", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -647,13 +946,32 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === "/__checks") {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.end(
-        `<!doctype html><html lang="zh"><title>Browser regression</title><body><h1>Production UI regression — isolated fixtures</h1><p>No backend API writes. Run after pnpm build; results distinguish fixtures from real integration.</p><button id="run">Run checks</button><pre id="results">Ready</pre><div id="frames"></div><script>document.querySelector('#run').onclick=()=>{document.querySelector('#run').disabled=true;(${runChecks.toString()})()};</script></body></html>`,
+        `<!doctype html><html lang="en"><title>Browser regression</title><body><h1>Production UI regression — isolated fixtures</h1><p>No backend API writes. Run after pnpm build; results distinguish fixtures from real integration.</p><button id="run">Run checks</button><pre id="results">Ready</pre><div id="frames"></div><script>const configIndexAvailable = ${Boolean(configIndex)};document.querySelector('#run').onclick=()=>{document.querySelector('#run').disabled=true;(${runChecks.toString()})()};</script></body></html>`,
       );
       return;
     }
     if (url.pathname === "/__fixture.js") {
       res.setHeader("Content-Type", "text/javascript");
       res.end(`(${installFixture.toString()})();`);
+      return;
+    }
+    if (url.pathname === "/__config" && configIndex) {
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.end(configIndex);
+      return;
+    }
+    if (url.pathname.startsWith("/__config-assets/") && configDist) {
+      const file = path.resolve(
+        configDist,
+        "assets",
+        url.pathname.slice("/__config-assets/".length),
+      );
+      if (!file.startsWith(path.join(configDist, "assets") + path.sep)) {
+        res.writeHead(403).end();
+        return;
+      }
+      res.setHeader("Content-Type", types[path.extname(file)] ?? "application/octet-stream");
+      res.end(await readFile(file));
       return;
     }
     if (url.pathname === "/__clip.mp4") {

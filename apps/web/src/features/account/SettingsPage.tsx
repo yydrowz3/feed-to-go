@@ -1,7 +1,8 @@
+import { useAppTranslation } from "../../i18n/react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import { LogOut } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "../../i18n/toast";
 import { useAuth, useRuntime } from "../../lib/app-context";
 import { isCancellation } from "../../api/client";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
@@ -16,6 +17,7 @@ export function SettingsPage() {
   return <SettingsContent key={auth.sessionId} />;
 }
 function SettingsContent() {
+  const { t } = useAppTranslation();
   const auth = useAuth();
   const runtime = useRuntime();
   const router = useRouter();
@@ -36,9 +38,8 @@ function SettingsContent() {
     try {
       const result = await logoutSession(runtime, lifetime.current?.signal);
       if (!result.completed) return;
-      if (result.error && !isCancellation(result.error))
-        toast.error("服务端退出失败，本地登录状态已清除");
-      else if (!result.error) toast.success("已退出登录");
+      if (result.error && !isCancellation(result.error)) toast.error("account.logoutLocal");
+      else if (!result.error) toast.success("account.loggedOut");
       await router.invalidate();
       await router.navigate({ to: "/", replace: true });
     } finally {
@@ -50,33 +51,44 @@ function SettingsContent() {
   return (
     <section className="card mx-auto max-w-xl bg-base-200">
       <div className="card-body gap-6">
-        <h1 className="text-2xl font-bold">账号设置</h1>
-        <AccountIdentity username={auth.username} accountId={auth.accountId} />
-        <p className="text-base-content/60">
-          管理用户名和登录状态。修改密码后需要重新登录当前账号。
-        </p>
-        <button type="button" className="btn self-start" onClick={() => setRenameOpen(true)}>
-          修改用户名
+        <h1 className="text-2xl font-bold">{t("account.settings")}</h1>
+        <AccountIdentity
+          username={auth.username || t("common.anonymous")}
+          accountId={auth.accountId}
+        />
+        <p className="text-base-content/60">{t("account.settingsHelp")}</p>
+        <button
+          type="button"
+          data-testid="rename-open"
+          className="btn self-start"
+          onClick={() => setRenameOpen(true)}
+        >
+          {t("account.rename")}
         </button>
         <Link to="/account/change-password" className="btn self-start">
-          修改密码
+          {t("account.changePassword")}
         </Link>
-        <NativeDialog open={renameOpen} title="修改用户名" onClose={() => setRenameOpen(false)}>
+        <NativeDialog
+          open={renameOpen}
+          title={t("account.rename")}
+          onClose={() => setRenameOpen(false)}
+        >
           {renameOpen && <RenameForm close={() => setRenameOpen(false)} />}
         </NativeDialog>
         <button
           type="button"
           className="btn btn-error self-start"
+          data-testid="signout-open"
           disabled={busy}
           onClick={() => setOpen(true)}
         >
           <LogOut size={18} />
-          退出登录
+          {t("account.signOut")}
         </button>
         <ConfirmDialog
           open={open}
-          title="退出登录？"
-          description="退出后可随时重新登录此账号。"
+          title={t("account.signOutConfirm")}
+          description={t("account.signOutHelp")}
           busy={busy}
           onClose={() => {
             if (!busy) setOpen(false);
@@ -90,18 +102,24 @@ function SettingsContent() {
   );
 }
 function RenameForm({ close }: { close: () => void }) {
+  const { t } = useAppTranslation();
   const runtime = useRuntime();
   const auth = useAuth();
   const getSignal = useActionScope();
   return (
     <AccountForm
       fields={[
-        { name: "username", label: "新用户名", initial: auth.username, autoComplete: "username" },
+        {
+          name: "username",
+          label: t("account.newUsername"),
+          initial: auth.username,
+          autoComplete: "username",
+        },
       ]}
-      submitLabel="保存用户名"
+      submitLabel={t("account.saveUsername")}
       onSubmit={async (values) => {
         await renameAccount(runtime, values.username, getSignal());
-        toast.success("用户名已更新");
+        toast.success("account.usernameUpdated");
         close();
       }}
     />

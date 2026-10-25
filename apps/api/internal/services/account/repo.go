@@ -2,6 +2,7 @@ package account
 
 import (
 	"context"
+	"feed-to-go/pkg/apierror"
 
 	"gorm.io/gorm"
 )
@@ -16,6 +17,9 @@ func NewAccountRepository(db *gorm.DB) *AccountRepository {
 
 func (ar *AccountRepository) CreateAccount(ctx context.Context, account *Account) error {
 	if err := ar.db.WithContext(ctx).Create(account).Error; err != nil {
+		if apierror.IsDuplicate(err) {
+			return ErrUsernameTaken
+		}
 		return err
 	}
 
@@ -39,6 +43,9 @@ func (ar *AccountRepository) RenameWithToken(ctx context.Context, id uint, newUs
 	return ar.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		result := tx.Model(&Account{}).Where("id = ?", id).Update("username", newUsername)
 		if result.Error != nil {
+			if apierror.IsDuplicate(result.Error) {
+				return ErrUsernameTaken
+			}
 			return result.Error
 		}
 		if result.RowsAffected == 0 {

@@ -15,7 +15,7 @@ export function useActionScope() {
   }, [runtime]);
   return () => {
     const signal = ref.current?.signal;
-    if (!signal) throw new DOMException("页面已关闭", "AbortError");
+    if (!signal) throw new DOMException("errors.pageClosed", "AbortError");
     signal.throwIfAborted();
     return signal;
   };

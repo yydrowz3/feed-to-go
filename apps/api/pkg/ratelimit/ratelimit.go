@@ -2,9 +2,9 @@ package ratelimit
 
 import (
 	"feed-to-go/internal/auth"
+	"feed-to-go/pkg/apierror"
 	"feed-to-go/pkg/cache"
 	"fmt"
-	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -34,9 +34,7 @@ func Limit(cache *cache.Client, keyPrefix string, maxRequests int64, window time
 			return
 		}
 		if count > maxRequests {
-			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-				"error": "too many requests",
-			})
+			apierror.Write(c, apierror.RateLimited)
 			return
 		}
 		c.Next()

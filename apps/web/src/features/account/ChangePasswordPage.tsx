@@ -1,5 +1,6 @@
+import { useAppTranslation } from "../../i18n/react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { toast } from "sonner";
+import { toast } from "../../i18n/toast";
 import { useAuth, useRuntime } from "../../lib/app-context";
 import { AccountForm } from "./AccountForm";
 import { changePassword } from "./session-actions";
@@ -15,7 +16,7 @@ export function ChangePasswordPage() {
       username={auth.username}
       submit={async (values, signal) => {
         await changePassword(runtime, values, signal);
-        toast.success("密码已修改，请登录");
+        toast.success("account.passwordChanged");
         await navigate({ to: "/account", replace: true });
       }}
     />
@@ -28,27 +29,38 @@ function ChangePasswordForm({
   username: string;
   submit: (values: Record<string, string>, signal: AbortSignal) => Promise<void>;
 }) {
+  const { t } = useAppTranslation();
   const getSignal = useActionScope();
   return (
     <section className="card mx-auto max-w-md bg-base-200">
       <div className="card-body gap-5">
-        <h1 className="text-2xl font-bold">修改密码</h1>
+        <h1 className="text-2xl font-bold">{t("account.changePassword")}</h1>
         <AccountForm
           fields={[
-            { name: "username", label: "用户名", initial: username, autoComplete: "username" },
+            {
+              name: "username",
+              label: t("account.username"),
+              initial: username,
+              autoComplete: "username",
+            },
             {
               name: "old_password",
-              label: "旧密码",
+              label: t("account.oldPassword"),
               password: true,
               autoComplete: "current-password",
             },
-            { name: "new_password", label: "新密码", password: true, autoComplete: "new-password" },
+            {
+              name: "new_password",
+              label: t("account.newPassword"),
+              password: true,
+              autoComplete: "new-password",
+            },
           ]}
-          submitLabel="修改密码"
+          submitLabel={t("account.changePassword")}
           onSubmit={(values) => submit(values, getSignal())}
         />
         <Link to="/account" className="link">
-          返回账号
+          {t("account.backAccount")}
         </Link>
       </div>
     </section>

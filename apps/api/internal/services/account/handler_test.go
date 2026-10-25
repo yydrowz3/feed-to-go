@@ -10,9 +10,12 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -24,12 +27,21 @@ import (
 type loginConnector struct {
 	account                 Account
 	queryError, updateError error
+	insertGuard             sync.Mutex
+	inserted                bool
+	uniqueInsert            bool
 }
 type loginConn struct{ fixture *loginConnector }
 type loginRows struct {
-	values []driver.Value
-	read   bool
+	values  []driver.Value
+	read    bool
+	columns []string
 }
+type loginTx struct{}
+
+func (loginTx) Commit() error   { return nil }
+func (loginTx) Rollback() error { return nil }
+
 type loginDriver struct{}
 
 func (d loginDriver) Open(string) (driver.Conn, error) { return nil, errors.New("use connector") }
@@ -41,8 +53,17 @@ func (c *loginConn) Prepare(string) (driver.Stmt, error) {
 	return nil, errors.New("unexpected prepare")
 }
 func (c *loginConn) Close() error              { return nil }
-func (c *loginConn) Begin() (driver.Tx, error) { return nil, errors.New("unexpected transaction") }
-func (c *loginConn) QueryContext(_ context.Context, _ string, args []driver.NamedValue) (driver.Rows, error) {
+func (c *loginConn) Begin() (driver.Tx, error) { return loginTx{}, nil }
+func (c *loginConn) QueryContext(_ context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
+	if c.fixture.uniqueInsert && strings.HasPrefix(query, "INSERT") {
+		c.fixture.insertGuard.Lock()
+		defer c.fixture.insertGuard.Unlock()
+		if c.fixture.inserted {
+			return nil, &pgconn.PgError{Code: "23505"}
+		}
+		c.fixture.inserted = true
+		return &loginRows{values: []driver.Value{int64(1)}, columns: []string{"id"}}, nil
+	}
 	if c.fixture.queryError != nil {
 		return nil, c.fixture.queryError
 	}
@@ -59,6 +80,9 @@ func (c *loginConn) ExecContext(context.Context, string, []driver.NamedValue) (d
 	return driver.RowsAffected(1), nil
 }
 func (r *loginRows) Columns() []string {
+	if r.columns != nil {
+		return r.columns
+	}
 	return []string{"id", "username", "password", "token", "refresh_token"}
 }
 func (r *loginRows) Close() error { return nil }
@@ -87,8 +111,8 @@ func TestLoginHTTPContract(t *testing.T) {
 		{name: "success", username: "qatester", password: "CorrectTestPassword", status: http.StatusOK},
 		{name: "wrong password", username: "qatester", password: "WrongPassword", status: http.StatusUnauthorized, message: "invalid username or password"},
 		{name: "unknown username", username: "missing", password: "CorrectTestPassword", status: http.StatusUnauthorized, message: "invalid username or password"},
-		{name: "lookup outage", username: "qatester", password: "CorrectTestPassword", queryError: errors.New("private database detail"), status: http.StatusInternalServerError, message: "login failed"},
-		{name: "session persistence outage", username: "qatester", password: "CorrectTestPassword", updateError: errors.New("private database detail"), status: http.StatusInternalServerError, message: "login failed"},
+		{name: "lookup outage", username: "qatester", password: "CorrectTestPassword", queryError: errors.New("private database detail"), status: http.StatusInternalServerError, message: "internal server error"},
+		{name: "session persistence outage", username: "qatester", password: "CorrectTestPassword", updateError: errors.New("private database detail"), status: http.StatusInternalServerError, message: "internal server error"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -119,7 +143,7 @@ func TestLoginHTTPContract(t *testing.T) {
 				if data["account_id"] != float64(41) || data["username"] != "qatester" || !accessOK || access == "" || !refreshOK || refresh == "" {
 					t.Fatal("missing successful login identity or credentials")
 				}
-			} else if data["error"] != tc.message || data["token"] != nil || data["refresh_token"] != nil {
+			} else if data["code"] != map[int]string{401: "INVALID_CREDENTIALS", 500: "INTERNAL_ERROR"}[tc.status] || data["error"] != tc.message || data["token"] != nil || data["refresh_token"] != nil {
 				t.Fatal("error response exposed details or created a session")
 			}
 		})

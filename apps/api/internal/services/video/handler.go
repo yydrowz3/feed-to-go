@@ -4,6 +4,7 @@ import (
 	"feed-to-go/internal/auth"
 	"feed-to-go/internal/services/account"
 	"feed-to-go/internal/util"
+	"feed-to-go/pkg/apierror"
 	"fmt"
 	"net/http"
 	"os"
@@ -27,17 +28,17 @@ func NewVideoHandler(service *VideoService, accountService *account.AccountServi
 func (vh *VideoHandler) PublishVideo(c *gin.Context) {
 	var req PublishVideoRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.Write(c, apierror.ValidationFailed)
 		return
 	}
 	authorId, err := auth.GetAccountID(c)
 	if err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.Write(c, apierror.AuthRequired)
 		return
 	}
 	username, err := auth.GetUsername(c)
 	if err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.Write(c, apierror.AuthRequired)
 		return
 	}
 	video := &Video{
@@ -50,7 +51,7 @@ func (vh *VideoHandler) PublishVideo(c *gin.Context) {
 		CreateTime:  time.Now(),
 	}
 	if err := vh.service.Publish(c.Request.Context(), video); err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.From(c, err, apierror.VideoNotFound)
 		return
 	}
 
@@ -114,19 +115,23 @@ func (vh *VideoHandler) UploadVideo(c *gin.Context) {
 func (vh *VideoHandler) UploadCover(c *gin.Context) {
 	authorId, err := auth.GetAccountID(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierror.Write(c, apierror.AuthRequired)
 		return
 	}
 
 	f, err := c.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing file"})
+		apierror.Write(c, apierror.ValidationFailed)
 		return
 	}
 
 	const maxSize = 10 << 20
-	if f.Size <= 0 || f.Size > maxSize {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid file size"})
+	if f.Size <= 0 {
+		apierror.Write(c, apierror.ValidationFailed)
+		return
+	}
+	if f.Size > maxSize {
+		apierror.Write(c, apierror.FileTooLarge)
 		return
 	}
 
@@ -134,7 +139,7 @@ func (vh *VideoHandler) UploadCover(c *gin.Context) {
 	switch ext {
 	case ".jpg", ".jpeg", ".png", ".webp":
 	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": "only .jpg/.jpeg/.png/.webp is allowed"})
+		apierror.Write(c, apierror.UnsupportedFileType)
 		return
 	}
 
@@ -143,20 +148,20 @@ func (vh *VideoHandler) UploadCover(c *gin.Context) {
 	root := filepath.Join(".run", "uploads")
 	absDir := filepath.Join(root, relDir)
 	if err := os.MkdirAll(absDir, 0o755); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierror.From(c, err, apierror.VideoNotFound)
 		return
 	}
 
 	filename, err := util.RandHex(16)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate filename"})
+		apierror.From(c, err, apierror.InternalError)
 		return
 	}
 	filename = filename + ext
 	absPath := filepath.Join(absDir, filename)
 
 	if err := c.SaveUploadedFile(f, absPath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierror.From(c, err, apierror.VideoNotFound)
 		return
 	}
 
@@ -193,14 +198,14 @@ func (vh *VideoHandler) DeleteVideo(c *gin.Context) {
 func (vh *VideoHandler) ListByAuthorID(c *gin.Context) {
 	var req ListByAuthorIDRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.Write(c, apierror.ValidationFailed)
 		return
 	}
 
 	videos, err := vh.service.ListByAuthorID(c.Request.Context(), req.AuthorID)
 
 	if err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.From(c, err, apierror.VideoNotFound)
 		return
 	}
 
@@ -214,12 +219,12 @@ func (vh *VideoHandler) ListByAuthorID(c *gin.Context) {
 func (vh *VideoHandler) GetDetail(c *gin.Context) {
 	var req GetDetailRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.Write(c, apierror.ValidationFailed)
 		return
 	}
 	video, err := vh.service.GetDetail(c.Request.Context(), req.ID)
 	if err != nil {
-		c.JSON(util.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		apierror.From(c, err, apierror.VideoNotFound)
 		return
 	}
 

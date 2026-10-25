@@ -21,7 +21,7 @@ type FeedVideoItem struct {
 
 type ListLatestRequest struct {
 	Limit      int   `json:"limit"`
-	LatestTime int64 `json:"latest_time"`
+	LatestTime int64 `json:"latest_time" binding:"min=0"`
 }
 
 type ListLatestResponse struct {
@@ -50,7 +50,7 @@ type LikesCountCursor struct {
 
 type ListByFollowingRequest struct {
 	Limit      int   `json:"limit"`
-	LatestTime int64 `json:"latest_time"`
+	LatestTime int64 `json:"latest_time" binding:"min=0"`
 }
 
 type ListByFollowingResponse struct {
@@ -61,8 +61,8 @@ type ListByFollowingResponse struct {
 
 type ListByPopularityRequest struct {
 	Limit          int   `json:"limit"`
-	AsOf           int64 `json:"as_of"`  // 服务器返回的分钟时间戳；第一页传0
-	Offset         int   `json:"offset"` // 下一页从这里开始；第一页传0
+	AsOf           int64 `json:"as_of" binding:"min=0"`  // 服务器返回的分钟时间戳；第一页传0
+	Offset         int   `json:"offset" binding:"min=0"` // 下一页从这里开始；第一页传0
 	LatestIDBefore *uint `json:"latest_id_before,omitempty"`
 
 	// DB fallback 用（可选）

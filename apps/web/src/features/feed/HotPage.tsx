@@ -1,3 +1,4 @@
+import { useAppTranslation } from "../../i18n/react";
 import { useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
@@ -11,6 +12,7 @@ import { VideoCard } from "../video/VideoCard";
 import { useFeedQuery } from "./queries";
 import { uniqueVideos } from "./pagination";
 export function HotPage() {
+  const { number, t, message: displayMessage } = useAppTranslation();
   const [limit, setLimit] = useState(10);
   const auth = useAuth();
   const { queryClient } = useRuntime();
@@ -23,7 +25,7 @@ export function HotPage() {
           .string()
           .refine(
             (value) => Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 50,
-            "每页数量须为 1～50 的整数",
+            "validation.pageSize",
           ),
       }),
     },
@@ -45,8 +47,8 @@ export function HotPage() {
     <section className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">热榜</h1>
-          <p className="mt-2 text-sm text-base-content/60">按热度排序，刷新后更新榜单。</p>
+          <h1 className="text-2xl font-bold">{t("navigation.hot")}</h1>
+          <p className="mt-2 text-sm text-base-content/60">{t("feed.hotHelp")}</p>
         </div>
         <form
           className="flex flex-wrap items-end gap-2"
@@ -57,7 +59,7 @@ export function HotPage() {
         >
           <form.Field name="limit">
             {(field) => (
-              <FormField id="hot-limit" label="每页数量" errors={field.state.meta.errors}>
+              <FormField id="hot-limit" label={t("feed.pageSize")} errors={field.state.meta.errors}>
                 <input
                   id="hot-limit"
                   type="number"
@@ -73,16 +75,16 @@ export function HotPage() {
             )}
           </form.Field>
           <button className="btn" disabled={query.isFetching}>
-            刷新 / 应用
+            {t("feed.apply")}
           </button>
         </form>
       </div>
       {query.isPending ? (
         <LoadingState />
       ) : query.isError && !query.data ? (
-        <ErrorState message={query.error.message} retry={() => void query.restart()} />
+        <ErrorState message={query.error} retry={() => void query.restart()} />
       ) : !items.length ? (
-        <EmptyState title="暂无热榜视频" />
+        <EmptyState title={t("feed.noTrending")} />
       ) : (
         <ol className="space-y-4">
           {items.map((item, index) => (
@@ -90,7 +92,7 @@ export function HotPage() {
               <span
                 className={`w-7 shrink-0 pt-4 text-center text-xl font-black ${index < 3 ? "text-primary" : "text-base-content/50"}`}
               >
-                {index + 1}
+                {number(index + 1)}
               </span>
               <VideoCard item={item} />
             </li>
@@ -99,21 +101,25 @@ export function HotPage() {
       )}
       {query.isError && !!query.data && (
         <p role="alert" className="text-error">
-          {query.error.message}
+          {displayMessage(query.error)}
         </p>
       )}
-      {broken && <p role="alert">分页游标异常，请刷新榜单。</p>}
+      {broken && <p role="alert">{t("errors.hotCursor")}</p>}
       {query.hasNextPage && (
         <button
           className="btn btn-primary"
           disabled={query.isFetching}
           onClick={() => void query.fetchNextPage()}
         >
-          {query.isFetchingNextPage ? "加载中…" : query.isError ? "重试加载更多" : "加载更多"}
+          {query.isFetchingNextPage
+            ? t("common.loading")
+            : query.isError
+              ? t("feed.retryMore")
+              : t("common.loadMore")}
         </button>
       )}
       {!query.hasNextPage && !broken && !!items.length && (
-        <p className="text-center text-sm text-base-content/60">已到底</p>
+        <p className="text-center text-sm text-base-content/60">{t("feed.end")}</p>
       )}
     </section>
   );

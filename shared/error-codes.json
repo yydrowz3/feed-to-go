@@ -1,0 +1,132 @@
+[
+  {
+    "code": "VALIDATION_FAILED",
+    "status": 400,
+    "error": "invalid request"
+  },
+  {
+    "code": "INVALID_CURRENT_PASSWORD",
+    "status": 400,
+    "error": "current password is incorrect"
+  },
+  {
+    "code": "SELF_FOLLOW_NOT_ALLOWED",
+    "status": 400,
+    "error": "cannot follow yourself"
+  },
+  {
+    "code": "UNSUPPORTED_FILE_TYPE",
+    "status": 400,
+    "error": "unsupported file type"
+  },
+  {
+    "code": "UPLOAD_HASH_MISMATCH",
+    "status": 400,
+    "error": "upload hash mismatch"
+  },
+  {
+    "code": "AUTH_REQUIRED",
+    "status": 401,
+    "error": "authentication required"
+  },
+  {
+    "code": "INVALID_TOKEN",
+    "status": 401,
+    "error": "invalid token"
+  },
+  {
+    "code": "TOKEN_EXPIRED",
+    "status": 401,
+    "error": "token expired"
+  },
+  {
+    "code": "TOKEN_REVOKED",
+    "status": 401,
+    "error": "token has been revoked"
+  },
+  {
+    "code": "INVALID_REFRESH_TOKEN",
+    "status": 401,
+    "error": "invalid refresh token"
+  },
+  {
+    "code": "INVALID_CREDENTIALS",
+    "status": 401,
+    "error": "invalid username or password"
+  },
+  {
+    "code": "FORBIDDEN",
+    "status": 403,
+    "error": "permission denied"
+  },
+  {
+    "code": "ACCOUNT_NOT_FOUND",
+    "status": 404,
+    "error": "account not found"
+  },
+  {
+    "code": "VIDEO_NOT_FOUND",
+    "status": 404,
+    "error": "video not found"
+  },
+  {
+    "code": "COMMENT_NOT_FOUND",
+    "status": 404,
+    "error": "comment not found"
+  },
+  {
+    "code": "UPLOAD_SESSION_NOT_FOUND",
+    "status": 404,
+    "error": "upload session not found"
+  },
+  {
+    "code": "USERNAME_TAKEN",
+    "status": 409,
+    "error": "username already exists"
+  },
+  {
+    "code": "ALREADY_LIKED",
+    "status": 409,
+    "error": "video already liked"
+  },
+  {
+    "code": "NOT_LIKED",
+    "status": 409,
+    "error": "video is not liked"
+  },
+  {
+    "code": "ALREADY_FOLLOWED",
+    "status": 409,
+    "error": "account already followed"
+  },
+  {
+    "code": "NOT_FOLLOWING",
+    "status": 409,
+    "error": "account is not followed"
+  },
+  {
+    "code": "UPLOAD_INCOMPLETE",
+    "status": 409,
+    "error": "not all chunks uploaded"
+  },
+  {
+    "code": "FILE_TOO_LARGE",
+    "status": 413,
+    "error": "file too large"
+  },
+  {
+    "code": "RATE_LIMITED",
+    "status": 429,
+    "error": "too many requests"
+  },
+  {
+    "code": "INTERNAL_ERROR",
+    "status": 500,
+    "error": "internal server error"
+  },
+  {
+    "code": "UPLOAD_SERVICE_UNAVAILABLE",
+    "status": 503,
+    "error": "upload service unavailable"
+  }
+]

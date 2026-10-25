@@ -1,3 +1,4 @@
+import { useAppTranslation } from "../i18n/react";
 import { useEffect, useId, useRef } from "react";
 import type { ReactNode } from "react";
 import { X } from "lucide-react";
@@ -14,6 +15,7 @@ export function NativeDialog({
   children: ReactNode;
   drawer?: boolean;
 }) {
+  const { t } = useAppTranslation();
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   useEffect(() => {
@@ -58,7 +60,8 @@ export function NativeDialog({
           <button
             type="button"
             className="btn btn-circle btn-ghost btn-sm shrink-0"
-            aria-label="关闭"
+            aria-label={t("common.close")}
+            data-testid="dialog-close"
             onClick={onClose}
           >
             <X size={18} />

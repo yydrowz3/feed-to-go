@@ -1,3 +1,4 @@
+import { useAppTranslation } from "../../i18n/react";
 import { Link } from "@tanstack/react-router";
 import { useAuth, useRuntime } from "../../lib/app-context";
 import { mediaUrl } from "../../lib/media-url";
@@ -11,6 +12,7 @@ import { useState } from "react";
 import { VideoList } from "./VideoLists";
 
 export function MyAccountPage() {
+  const { t } = useAppTranslation();
   const auth = useAuth();
   const { baseUrl } = useRuntime();
   const profile = useAccount(auth.accountId);
@@ -20,7 +22,7 @@ export function MyAccountPage() {
       <div className="card bg-base-200">
         <div className="card-body gap-4">
           <UserAvatar
-            username={profile.data?.username ?? auth.username}
+            username={profile.data?.username || auth.username || t("common.anonymous")}
             src={mediaUrl(profile.data?.avatar_url, baseUrl)}
             size="lg"
           />
@@ -31,7 +33,8 @@ export function MyAccountPage() {
           {profile.isPending && <LoadingState />}
           {profile.isError && (
             <ErrorState
-              message="资料加载失败，当前显示登录身份"
+              message={profile.error}
+              fallback="errors.profileFallback"
               retry={() => void profile.refetch()}
             />
           )}
@@ -40,11 +43,11 @@ export function MyAccountPage() {
           )}
           <SocialSummary targetId={auth.accountId} />
           <Link to="/settings" className="btn btn-primary self-start">
-            账号设置
+            {t("account.settings")}
           </Link>
         </div>
       </div>
-      <div role="tablist" aria-label="我的视频" className="tabs tabs-border">
+      <div role="tablist" aria-label={t("account.myVideos")} className="tabs tabs-border">
         <button
           type="button"
           role="tab"
@@ -52,7 +55,7 @@ export function MyAccountPage() {
           className={`tab ${tab === "works" ? "tab-active" : ""}`}
           onClick={() => setTab("works")}
         >
-          作品
+          {t("account.videos")}
         </button>
         <button
           type="button"
@@ -61,7 +64,7 @@ export function MyAccountPage() {
           className={`tab ${tab === "liked" ? "tab-active" : ""}`}
           onClick={() => setTab("liked")}
         >
-          喜欢
+          {t("account.likes")}
         </button>
       </div>
       <VideoList key={tab} authorId={auth.accountId} liked={tab === "liked"} />

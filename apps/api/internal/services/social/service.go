@@ -2,8 +2,8 @@ package social
 
 import (
 	"context"
-	"errors"
 	"feed-to-go/internal/services/account"
+	"feed-to-go/pkg/apierror"
 	"feed-to-go/pkg/cache"
 	"feed-to-go/pkg/logging"
 	"feed-to-go/pkg/mq"
@@ -31,14 +31,14 @@ func (s *SocialService) Follow(ctx context.Context, social *Social) error {
 		return err
 	}
 	if social.FollowerID == social.FollowingID {
-		return errors.New("can not follow self")
+		return apierror.SelfFollowNotAllowed
 	}
 	isFollowed, err := s.repo.IsFollowed(ctx, social)
 	if err != nil {
 		return err
 	}
 	if isFollowed {
-		return errors.New("already followed")
+		return apierror.AlreadyFollowed
 	}
 
 	// 先写 DB，确保数据持久化
@@ -73,7 +73,7 @@ func (s *SocialService) Unfollow(ctx context.Context, social *Social) error {
 		return err
 	}
 	if !isFollowed {
-		return errors.New("not followed")
+		return apierror.NotFollowing
 	}
 
 	// 先写 DB

@@ -1,3 +1,4 @@
+import { AppError } from "../../i18n/app-error.ts";
 import type { AppRuntime } from "../../lib/runtime.ts";
 import type {
   Account,
@@ -15,7 +16,7 @@ export async function runSessionAction(
   apply: () => void,
 ) {
   const viewer = runtime.authStore.getState();
-  if (!viewer.accessToken) throw new Error("请先登录");
+  if (!viewer.accessToken) throw new AppError("account.signInRequired");
   let gate = gates.get(runtime);
   if (!gate) {
     gate = createActionGate();

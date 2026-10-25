@@ -13,6 +13,15 @@ function setup(fetchImpl, initial = {}) {
   }
   return { client: createApiClient({ baseUrl: 'https://backend.test', fetchImpl, auth }), state: () => state, set: value => { state = { ...state, ...value } } }
 }
+test('400/403/404/409/413/429 do not refresh, retry or clear a valid session; code is parsed independently of prose', async () => {
+  for (const status of [400,403,404,409,413,429]) {
+    let calls = 0;
+    const env = setup(async () => { calls++; return response({ code: 'FORBIDDEN', error: 'private' },status) });
+    await assert.rejects(env.client.postJson('/private',{}), error => error instanceof ApiError && error.status === status && error.code === 'FORBIDDEN' && error.payload.error === 'private');
+    assert.equal(calls,1);
+    assert.equal(env.state().accessToken,token());
+  }
+});
 test('concurrent 401s share refresh and preserve old refresh token', async () => {
   let refreshes = 0; const gate = deferred(); const started = deferred()
   const env = setup(async (url, init) => {

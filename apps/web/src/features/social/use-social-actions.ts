@@ -1,6 +1,6 @@
 import { useIsMutating, useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "@tanstack/react-router";
-import { toast } from "sonner";
+import { toast } from "../../i18n/toast";
 import { useAuth, useRuntime } from "../../lib/app-context";
 import { queryKeys } from "../../lib/query-keys";
 import { isCancellation } from "../../api/client";
@@ -13,7 +13,7 @@ export function useRequireLogin() {
   const location = useLocation();
   return () => {
     if (auth.accessToken) return false;
-    toast.info("请先登录");
+    toast.info("account.signInRequired");
     void navigate({ to: "/account", search: { redirect: location.href } });
     return true;
   };
@@ -31,10 +31,10 @@ export function useLikeAction(videoId: number, wasLiked: boolean, ready = true) 
       try {
         const applied = await likeVideo(runtime, videoId, wasLiked);
         if (applied && runtime.authStore.getState().sessionId === auth.sessionId)
-          toast.success(wasLiked ? "已取消点赞" : "已点赞");
+          toast.success(wasLiked ? "social.unliked" : "social.liked");
       } catch (cause) {
         if (!isCancellation(cause) && runtime.authStore.getState().sessionId === auth.sessionId)
-          toast.error(cause instanceof Error ? cause.message : "点赞失败");
+          toast.error(cause);
       }
     },
   });
@@ -70,10 +70,10 @@ export function useFollowAction(author: Account) {
       try {
         const applied = await followAuthor(runtime, author, following);
         if (applied && runtime.authStore.getState().sessionId === auth.sessionId)
-          toast.success(following ? "已取消关注" : "已关注");
+          toast.success(following ? "social.unfollowed" : "social.following");
       } catch (cause) {
         if (!isCancellation(cause) && runtime.authStore.getState().sessionId === auth.sessionId)
-          toast.error(cause instanceof Error ? cause.message : "关注操作失败");
+          toast.error(cause);
       }
     },
   });

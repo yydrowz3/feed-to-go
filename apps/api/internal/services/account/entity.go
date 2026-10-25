@@ -11,16 +11,16 @@ type Account struct {
 }
 
 type CreateAccountRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
 }
 
 type RenameRequest struct {
-	NewUsername string `json:"new_username"`
+	NewUsername string `json:"new_username" binding:"required"`
 }
 
 type FindByIDRequest struct {
-	ID uint `json:"id"`
+	ID uint `json:"id" binding:"required"`
 }
 
 type FindByIDResponse struct {
@@ -40,14 +40,14 @@ type FindByUsernameResponse struct {
 }
 
 type ChangePasswordRequest struct {
-	Username    string `json:"username"`
-	OldPassword string `json:"old_password"`
-	NewPassword string `json:"new_password"`
+	Username    string `json:"username" binding:"required"`
+	OldPassword string `json:"old_password" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required"`
 }
 
 type LoginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
 }
 
 type LoginResponse struct {
@@ -63,11 +63,11 @@ type UpdateProfileRequest struct {
 }
 
 type RefreshRequest struct {
-	RefreshToken string `json:"refresh_token"`
+	RefreshToken string `json:"refresh_token" binding:"required"`
 }
 
 type GetProfileRequest struct {
-	AccountID uint `json:"account_id"`
+	AccountID uint `json:"account_id" binding:"required"`
 }
 
 type GetProfileResponse struct {

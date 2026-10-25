@@ -1,3 +1,4 @@
+import { useAppTranslation } from "../i18n/react";
 import type { ReactNode } from "react";
 export function FormField({
   id,
@@ -10,12 +11,13 @@ export function FormField({
   errors?: unknown[];
   children: ReactNode;
 }) {
+  const { message } = useAppTranslation();
   const messages = errors
     .map((error) =>
       typeof error === "string"
-        ? error
+        ? message(error)
         : error && typeof error === "object" && "message" in error
-          ? String(error.message)
+          ? message(error.message)
           : "",
     )
     .filter(Boolean);
@@ -27,7 +29,7 @@ export function FormField({
       {children}
       {messages.length > 0 && (
         <p id={id + "-error"} className="text-sm text-error" role="alert">
-          {messages.join("，")}
+          {messages.join(" · ")}
         </p>
       )}
     </div>
