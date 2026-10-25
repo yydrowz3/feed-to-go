@@ -22,12 +22,20 @@ test("redirects accept only internal non-login targets", () => {
   ])
     assert.equal(safeRedirect(value), undefined, String(value));
 });
-test("resource IDs reject invalid or unsafe integers and search rejects non-strings", () => {
+test("resource IDs reject invalid or unsafe integers", () => {
   for (const value of ["0", "-1", "1.5", "abc", "01", "1e2", "9007199254740992"])
     assert.throws(() => parseResourceId(value));
   assert.equal(parseResourceId("9007199254740991"), 9007199254740991);
-  assert.deepEqual(validateSearch({ q: 1 }), { q: "" });
+});
+test("search omits missing, invalid and blank queries", () => {
+  assert.deepEqual(validateSearch({}), { q: undefined });
+  for (const q of [undefined, null, 1, false, [], {}, "", " ", "\t\n", "\u3000"])
+    assert.deepEqual(validateSearch({ q }), { q: undefined });
+});
+test("search preserves non-empty queries", () => {
   assert.deepEqual(validateSearch({ q: "文字" }), { q: "文字" });
+  assert.deepEqual(validateSearch({ q: " hello world " }), { q: " hello world " });
+  assert.deepEqual(validateSearch({ q: "0" }), { q: "0" });
 });
 test("guard always reads current store and preserves original internal URL", () => {
   let accessToken = "";

@@ -428,6 +428,61 @@ async function runChecks() {
     return expected;
   };
   try {
+    await open("/", { locale: "en" });
+    await until(() => doc.querySelector(".snap-y"), "unfiltered feed");
+    const hasQuery = () => new URL(win.location.href).searchParams.has("q");
+    const searchInput = () => doc.querySelector("header input");
+    const searchFor = async (value) => {
+      win.fixture.setInput(searchInput(), value);
+      await pause(40);
+      await click("Search");
+    };
+    assert(!hasQuery(), "initial homepage omits q");
+    const itemCount = doc.querySelector(".snap-y").children.length;
+    await nav("/settings");
+    await nav("/");
+    assert(!hasQuery(), "homepage navigation omits q");
+    for (const value of ["", "   "]) {
+      await searchFor(value);
+      assert(!hasQuery(), "blank search omits q");
+    }
+    await searchFor("  中文标题  ");
+    await until(
+      () => new URL(win.location.href).searchParams.get("q") === "中文标题",
+      "trimmed Chinese search query",
+    );
+    await until(() => doc.querySelector(".snap-y"), "matching search results");
+    await searchFor("no-matching-video");
+    await until(() => !doc.querySelector(".snap-y"), "nonmatching search filters feed");
+    for (const value of ["", "   "]) {
+      await searchFor("中文标题");
+      await until(() => hasQuery(), "active search query");
+      await searchFor(value);
+      await until(() => !hasQuery(), "cleared search omits q");
+      await until(
+        () => doc.querySelector(".snap-y")?.children.length === itemCount,
+        "cleared search restores unfiltered feed",
+      );
+    }
+    for (const route of ["/feed", "/feed?q=", "/feed?q=%20%20"]) {
+      await open(route, { locale: "en" });
+      await until(() => win.location.pathname === "/", "legacy feed redirect");
+      assert(!hasQuery(), "legacy feed redirect omits blank q");
+      assert(searchInput().value === "", "empty search input after redirect");
+    }
+    for (const route of ["/?q=", "/?q=%20%20", "/?q=1"]) {
+      await open(route, { locale: "en" });
+      await until(() => !hasQuery(), "invalid initial query removed");
+      assert(searchInput().value === "", "empty input for invalid initial query");
+    }
+    await open("/feed?q=" + encodeURIComponent("中文标题"), { locale: "en" });
+    await until(() => win.location.pathname === "/", "legacy search redirect");
+    assert(
+      new URL(win.location.href).searchParams.get("q") === "中文标题",
+      "legacy feed redirect preserves non-empty query",
+    );
+    record("empty searches and home/feed navigation omit q; active searches still filter results");
+
     for (const systemTheme of ["light", "dark"]) {
       await open("/account", { auth: false, systemTheme });
       const expected = systemTheme === "dark" ? "night" : "light";

@@ -38,7 +38,8 @@ export function parseResourceId(value: string): number {
   return Number(value);
 }
 export function validateSearch(search: Record<string, unknown>): { q?: string } {
-  return { q: typeof search.q === "string" ? search.q : "" };
+  // Override parsed values because the router merges validated and original search params.
+  return { q: typeof search.q === "string" && search.q.trim() ? search.q : undefined };
 }
 export function validateAccountSearch(search: Record<string, unknown>): { redirect?: string } {
   return { redirect: safeRedirect(search.redirect) };

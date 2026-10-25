@@ -27,7 +27,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     defaultValues: { q: search.q ?? "" },
     validators: { onSubmit: z.object({ q: z.string() }) },
     onSubmit: async ({ value }) => {
-      await navigate({ to: "/", search: { q: value.q.trim() } });
+      const q = value.q.trim();
+      await navigate({ to: "/", search: q ? { q } : {} });
     },
   });
   useEffect(() => {
