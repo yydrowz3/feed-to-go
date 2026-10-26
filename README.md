@@ -275,6 +275,14 @@ real-service integration checks require a separate test environment.
   backups for uploaded media. Files on ephemeral hosting can disappear when an
   instance is replaced. Vite preview is intended for local build verification.
 
+Demo Accounts:
+
+| Accounts | username                      | password         |
+| -------- | ----------------------------- | ---------------- |
+| A        | qajohnnyparisianlxncqkkihchva | VG0xUA8Vg2YmL7xr |
+| B        | qamarcosstrackelxncqkkihchvb  | nKYzjUk60AnePIyw |
+| C        | qaalejandromantelxncqkkihchvc | UQxDTf1tm1EEcOOT |
+
 ## 👀 Limitations
 
 - Search filters loaded feed titles and authors; it does not search the entire database.
