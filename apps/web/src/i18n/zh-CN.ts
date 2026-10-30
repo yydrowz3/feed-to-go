@@ -89,7 +89,7 @@ export default {
     signIn: "登录",
     identity: "账号 #{{id}}",
     signedIn: "登录成功",
-    signInHeading: "登录 ShortVideo",
+    signInHeading: "登录 Feed To Go",
     signInHelp: "登录后即可互动和发布视频。",
     username: "用户名",
     password: "密码",

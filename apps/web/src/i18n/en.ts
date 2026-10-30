@@ -96,7 +96,7 @@ export default {
     signIn: "Sign in",
     identity: "Account #{{id}}",
     signedIn: "Signed in successfully",
-    signInHeading: "Sign in to Feed to Go",
+    signInHeading: "Sign in to Feed To Go",
     signInHelp: "Sign in to interact and publish videos.",
     username: "Username",
     password: "Password",

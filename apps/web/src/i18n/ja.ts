@@ -98,7 +98,7 @@ export default {
     signIn: "ログイン",
     identity: "アカウント #{{id}}",
     signedIn: "ログインしました",
-    signInHeading: "Feed to Go にログイン",
+    signInHeading: "Feed To Go にログイン",
     signInHelp: "ログインして交流や動画の投稿をしましょう。",
     username: "ユーザー名",
     password: "パスワード",
